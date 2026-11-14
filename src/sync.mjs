@@ -35,12 +35,10 @@ function save() {
   for (const fn of listeners) try { fn(store); } catch {}
 }
 
-// key -> [tool, args]
-const SOURCES = {
+// key -> [tool, args]. Account-specific keys are derived, so new accounts need no code change.
+const STATIC = {
   whoami: ["whoami", {}],
   accounts: ["get_my_accounts", {}],
-  paperwork_A: ["get_all_paperwork", { account: "A" }],
-  paperwork_B: ["get_all_paperwork", { account: "B" }],
   signals: ["get_signals", {}],
   notes: ["list_notes", {}],
   team: ["get_flytbase_team", {}],
@@ -48,7 +46,19 @@ const SOURCES = {
   release_notes: ["get_release_notes", {}],
   schema: ["get_data_format", {}],
 };
-const ROTATION = ["signals", "accounts", "signals", "paperwork_A", "whoami", "signals", "notes", "signals", "paperwork_B", "accounts"];
+const newIds = () => (store.sources.whoami?.new_accounts || []).map((a) => (typeof a === "string" ? a : a.id)).filter(Boolean);
+const baseIds = () => (store.sources.accounts?.accounts || []).map((a) => a.id);
+export const accountIds = () => [...new Set([...baseIds(), ...newIds()])];
+function sourceDef(key) {
+  if (STATIC[key]) return STATIC[key];
+  let m;
+  if ((m = key.match(/^paperwork_(\w+)$/))) return ["get_all_paperwork", { account: m[1] }];
+  if ((m = key.match(/^newacc_(\w+)$/))) return ["get_new_account", { account: m[1] }];
+  return null;
+}
+const allKeys = () => [...Object.keys(STATIC), ...accountIds().map((id) => `paperwork_${id}`), ...newIds().map((id) => `newacc_${id}`)];
+// Live events and whoami come round every ~2-3 minutes; every source at least once per cycle.
+const rotation = () => ["signals", "whoami", "accounts", "signals", "notes", ...accountIds().flatMap((id) => ["signals", `paperwork_${id}`]), "whoami", ...newIds().flatMap((id) => ["signals", `newacc_${id}`])];
 let rot = 0;
 const queue = []; // explicit priority jobs: {key, tool, args} or {write: noteArgs}
 
@@ -56,10 +66,11 @@ function nextJob() {
   if (store.pendingNotes.length) return { write: store.pendingNotes[0] };
   if (queue.length) return queue.shift();
   // bootstrap anything never fetched
-  for (const k of Object.keys(SOURCES)) if (!store.sources[k]) return { key: k };
+  for (const k of allKeys()) if (!store.sources[k]) return { key: k };
   for (const f of store.sources.accounts?.files || []) if (!store.sources[`file_${f.id}`]) return { key: `file_${f.id}`, tool: "get_file", args: { id: f.id } };
-  const k = ROTATION[rot++ % ROTATION.length];
-  return { key: k };
+  for (const id of newIds()) for (const f of store.sources[`newacc_${id}`]?.files || []) if (!store.sources[`file_${f.id}`]) return { key: `file_${f.id}`, tool: "get_new_account_file", args: { account: id, file_id: f.id } };
+  const r = rotation();
+  return { key: r[rot++ % r.length] };
 }
 
 async function tick() {
@@ -72,7 +83,7 @@ async function tick() {
       logChange("note_written", `Note written back to MCP: ${job.write.title || job.write.text.slice(0, 60)}`, { result: r });
       queue.push({ key: "notes" });
     } else {
-      const [tool, args] = job.tool ? [job.tool, job.args] : SOURCES[job.key];
+      const [tool, args] = job.tool ? [job.tool, job.args] : sourceDef(job.key);
       const data = await callTool(tool, args);
       const prev = store.sources[job.key];
       store.sources[job.key] = data;
@@ -81,7 +92,8 @@ async function tick() {
       // whoami tells us when something new is open -> refresh the rest sooner
       if (job.key === "whoami" && prev) {
         if ((data.signals ?? 0) !== (prev.signals ?? 0)) queue.push({ key: "signals" }, { key: "accounts" });
-        if (JSON.stringify(data.new_accounts) !== JSON.stringify(prev.new_accounts)) queue.push({ key: "accounts" });
+        const before = new Set((prev.new_accounts || []).map((a) => a.id || a));
+        for (const a of data.new_accounts || []) if (!before.has(a.id || a)) { logChange("new_account", `New account released: ${a.name || a.id}`, { source: "whoami", account: a.id || a }); queue.push({ key: `newacc_${a.id || a}` }, { key: `paperwork_${a.id || a}` }); }
       }
     }
     store.meta.lastOk = started;
@@ -108,7 +120,7 @@ function diff(key, prev, next) {
     for (const s of listOf(next)) if (!ids.has(sigKey(s))) logChange("new_signal", `Live event: ${s.title || s.headline || s.text || sigKey(s)}`, { source: "get_signals", ref: sigKey(s), account: s.account });
     return;
   }
-  if (key === "accounts") {
+  if (key === "accounts" || key.startsWith("newacc_")) {
     for (const acc of next.accounts || []) {
       const old = (prev.accounts || []).find((a) => a.id === acc.id);
       if (!old) { logChange("new_account", `New account: ${acc.name}`, { source: "get_my_accounts", account: acc.id }); continue; }
@@ -127,7 +139,7 @@ function diff(key, prev, next) {
     }
     return;
   }
-  logChange("source_changed", `${key} changed`, { source: SOURCES[key]?.[0] || key });
+  logChange("source_changed", `${key} changed`, { source: sourceDef(key)?.[0] || key });
 }
 const listOf = (x) => (Array.isArray(x) ? x : x?.signals || x?.events || x?.items || []);
 const sigKey = (s) => s.id || `${s.account}|${s.at || s.date || s.day}|${s.title || s.headline}`;
@@ -138,7 +150,7 @@ export function queueNote(note) {
   save();
 }
 export function refreshNow(key) {
-  if (SOURCES[key]) queue.unshift({ key });
+  if (sourceDef(key)) queue.unshift({ key });
 }
 
 let timer;

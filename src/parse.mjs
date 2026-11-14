@@ -83,3 +83,40 @@ export const addDays = (d, n) => new Date(new Date(d).getTime() + n * 864e5).toI
 /** Friday of the week containing d */
 export const fridayOf = (d) => { const x = new Date(d); const dow = x.getUTCDay(); return addDays(d, (5 - dow + 7) % 7); };
 export const fmtDate = (d) => new Date(d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+
+/** Site-level log (e.g. "dock,site,month,patrol_flights,test_flights"): one row per dock per month. */
+export function cleanSiteLog(text) {
+  const raw = parseCSV(text);
+  const issues = [];
+  const bySite = new Map();
+  const months = new Set();
+  raw.forEach((r, i) => {
+    const month = normMonth(r.month);
+    if (!month) { issues.push({ line: i + 2, issue: `Unreadable month "${r.month}"; row skipped` }); return; }
+    months.add(month);
+    const site = (r.site || r.force || "").trim();
+    const s = bySite.get(site) || { force: site, docks: new Set(), series: new Map(), live: 0, training: 0 };
+    s.docks.add(r.dock);
+    const live = +(r.patrol_flights ?? r.live_missions ?? 0), test = +(r.test_flights ?? r.training_flights ?? 0);
+    s.live += live; s.training += test;
+    const m = s.series.get(month) || { month, live: 0, docks_live: 0 };
+    m.live += live; if (live > 0) m.docks_live++;
+    s.series.set(month, m);
+    bySite.set(site, s);
+  });
+  const ms = [...months].sort();
+  const summary = [...bySite.values()].map((s) => {
+    const series = [...s.series.values()].sort((a, b) => a.month.localeCompare(b.month));
+    const last = series.at(-1);
+    return { force: s.force, docks: s.docks.size, dockIds: [...s.docks], live_missions: s.live, training: s.training, last_month: last?.month, last_docks_live: last?.docks_live ?? 0, operational: s.live > 0, series };
+  });
+  return { rows: raw, issues, months: ms, summary, unit: "site" };
+}
+
+/** Which usage log is this file, if any? */
+export function usageLogKind(text) {
+  const head = String(text || "").split("\n")[0].toLowerCase();
+  if (/\bforce\b/.test(head) && /month/.test(head) && /live_missions/.test(head)) return "force";
+  if (/\bsite\b/.test(head) && /\bdock\b/.test(head) && /month/.test(head) && /(patrol_flights|live_missions)/.test(head)) return "site";
+  return null;
+}

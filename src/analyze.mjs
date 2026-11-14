@@ -2,7 +2,7 @@
 // Rule: every number and every claim carries `cites` — ids that resolve in the evidence index.
 // Nothing here invents a person or an id: names come from get_my_accounts, paperwork,
 // get_flytbase_team or the morning debrief (seed/morning.json), and are labelled by source.
-import { parseCSV, cleanForceLog, days, addDays, fridayOf, fmtDate } from "./parse.mjs";
+import { parseCSV, cleanForceLog, cleanSiteLog, usageLogKind, days, addDays, fridayOf, fmtDate } from "./parse.mjs";
 
 export function analyze(store, morning) {
   const S = store.sources || {};
@@ -13,13 +13,23 @@ export function analyze(store, morning) {
   const E = {}; // evidence index
   const ev = (id, o) => (E[id] = { id, ...o }, id);
 
-  // "Today" is the later of the wall clock and the newest live event (the game's clock runs ahead).
+  // "Today" is the wall clock. New accounts give deadlines in minutes from their release, so a real clock
+  // keeps every countdown honest. Live events carry their own story date, shown as given.
   const latestSignal = signals.map((s) => s.dated).sort().pop();
   const today = new Date().toISOString().slice(0, 10);
-  const asOf = latestSignal && latestSignal > today ? latestSignal : today;
+  const asOf = today;
+
+  // Accounts released during the build (whoami.new_accounts → get_new_account) join with no code change.
+  const newIds = (S.whoami?.new_accounts || []).map((a) => a.id || a);
+  const newDocs = newIds.map((id) => S[`newacc_${id}`]).filter((d) => d?.accounts?.length);
+  const allFiles = [...(accountsDoc.files || []), ...newDocs.flatMap((d) => d.files || [])];
+  const allAccounts = [
+    ...(accountsDoc.accounts || []).map((a) => ({ ...a, _t0: accountsDoc.exported_at, _src: "get_my_accounts" })),
+    ...newDocs.flatMap((d) => d.accounts.map((a) => ({ ...a, _t0: d.exported_at, _src: "get_new_account", _released: true }))),
+  ];
 
   // ---------- evidence index: everything citable ----------
-  for (const f of accountsDoc.files || []) ev(f.id, { kind: "file", account: f.account, label: f.title, where: `get_file("${f.id}")`, text: S[`file_${f.id}`]?.text });
+  for (const f of allFiles) ev(f.id, { kind: "file", account: f.account, label: f.title, where: newIds.includes(f.account) ? `get_new_account_file("${f.account}", "${f.id}")` : `get_file("${f.id}")`, text: S[`file_${f.id}`]?.text });
   for (const s of signals) ev(s.id, { kind: "signal", account: s.account, label: s.title, where: "get_signals", date: s.dated, text: s.summary, records: s.records });
   for (const p of team) ev(`team:${p.id}`, { kind: "team", label: `${p.name} — ${p.role}`, where: "get_flytbase_team" });
   for (const d of morning.deals) ev(d.id, { kind: "debrief", account: d.account, label: `Debrief: ${d.title}`, where: "Play page › This morning", text: [d.why_stopped, d.decides && `Decides: ${d.decides}. Pays: ${d.pays}.`, d.blocker && `Blocker: ${d.blocker}`, d.unlock && `Unlock: ${d.unlock}`, d.came_up_with && `Came up with: ${d.came_up_with.join(", ")}`, d.at_risk_by && `Put at risk by: ${d.at_risk_by}`].filter(Boolean).join("\n") });
@@ -28,17 +38,23 @@ export function analyze(store, morning) {
   ev("dbf_book", { kind: "debrief", label: `Morning book: $${morning.book_usd.toLocaleString()}`, where: "Play page › This morning" });
 
   const out = [];
-  for (const acc of accountsDoc.accounts || []) {
+  for (const acc of allAccounts) {
     const pw = S[`paperwork_${acc.id}`]?.records || [];
     const rec = Object.fromEntries(pw.map((r) => [r.path, r]));
     const data = (p) => rec[p]?.data;
     const pref = (p) => `${acc.id}/${p}`;
     for (const r of pw) ev(pref(r.path), { kind: "record", account: acc.id, label: r.path, where: `get_paperwork_record("${acc.id}", "${r.path}")`, text: r.text ?? JSON.stringify(r.data, null, 1) });
-    for (const f of acc.facts) ev(f.id, { kind: "fact", account: acc.id, label: `“${f.text}”`, where: "get_my_accounts › facts", status: f.status, said_by: f.said_by, verified_by: f.verified_by, minute: f.learned_at_minute });
-    for (const p of acc.stakeholders) ev(p.id, { kind: "person", account: acc.id, label: `${p.name} — ${p.role}`, where: "get_my_accounts › stakeholders", relationship: p.relationship });
-    for (const o of acc.opportunities) ev(o.id, { kind: "deal", account: acc.id, label: o.title, where: "get_my_accounts › opportunities", stage: o.stage, text: o.blocker ? `Blocker (${o.blocker.status}): ${o.blocker.text}` : "No blocker on file" });
-    for (const o of acc.offers || []) ev(o.id, { kind: "offer", account: acc.id, label: `${o.title} (${o.status})`, where: "get_my_accounts › offers", value: o.value });
+    for (const f of acc.facts) ev(f.id, { kind: "fact", account: acc.id, label: `“${f.text}”`, where: `${acc._src} › facts`, status: f.status, said_by: f.said_by, verified_by: f.verified_by, minute: f.learned_at_minute });
+    for (const p of acc.stakeholders) ev(p.id, { kind: "person", account: acc.id, label: `${p.name} — ${p.role}`, where: `${acc._src} › stakeholders`, relationship: p.relationship });
+    for (const o of acc.opportunities) ev(o.id, { kind: "deal", account: acc.id, label: o.title, where: `${acc._src} › opportunities`, stage: o.stage, text: o.blocker ? `Blocker (${o.blocker.status}): ${o.blocker.text}` : "No blocker on file" });
+    for (const o of acc.offers || []) ev(o.id, { kind: "offer", account: acc.id, label: `${o.title} (${o.status})`, where: `${acc._src} › offers`, value: o.value });
     for (const t of data("tickets.json")?.tickets || []) ev(t.id, { kind: "ticket", account: acc.id, label: `${t.id} ${t.subject} (${t.status})`, where: `${acc.id}/tickets.json`, text: t.conversation?.map((c) => `${c.date} ${c.from}: ${c.text}`).join("\n") });
+
+    const minuteDate = (m) => (acc._t0 && m != null ? new Date(new Date(acc._t0).getTime() + m * 60000).toISOString().slice(0, 10) : null);
+    const deadlines = [];
+    (acc.deadlines || []).forEach((d, i) => { const id = ev(`deadline:${acc.id}:${i}`, { kind: "deadline", account: acc.id, label: d.text, where: `${acc._src} › deadlines`, date: minuteDate(d.minute), text: `${d.text} — minute ${d.minute} after ${acc._t0} = ${minuteDate(d.minute)}` }); deadlines.push({ id, text: d.text, date: minuteDate(d.minute), passed: !!d.passed }); });
+    for (const o of acc.opportunities) if (o.deadline?.minute != null && !deadlines.find((x) => x.text === o.deadline.text)) { const id = ev(`deadline:${acc.id}:${o.id}`, { kind: "deadline", account: acc.id, label: o.deadline.text, where: `${acc._src} › opportunities`, date: minuteDate(o.deadline.minute), text: o.deadline.text }); deadlines.push({ id, text: o.deadline.text, date: minuteDate(o.deadline.minute), deal: o.id }); }
+    for (const d of deadlines) d.deal ||= acc.opportunities.find((o) => o.deadline?.text === d.text)?.id;
 
     const profile = data("profile.json") || {};
     const cur = profile.currency === "GBP" ? "£" : profile.currency === "EUR" ? "€" : "$";
@@ -67,10 +83,26 @@ export function analyze(store, morning) {
     const last3 = months.slice(-3);
     const dockLast3 = Object.fromEntries(devices.map((d) => [d.dock_id, 0]));
     for (const f of flights) if (last3.includes(f.date.slice(0, 7))) dockLast3[f.dock_id]++;
-    const tiers = { regular: [], light: [], none: [] };
+    // weekly usage, plus rows that arrive later through live events ("Rows to add")
+    const weekly = rec["usage_weekly.csv"] ? parseCSV(rec["usage_weekly.csv"].text) : [];
+    const weeklySignals = new Set();
+    for (const s of signals.filter((s) => s.account === acc.id)) for (const r of s.records || []) if (r.kind === "usage") for (const row of parseCSV(r.text)) {
+      if (!weekly.find((w) => w.week_start === row.week_start && w.dock_id === row.dock_id)) { weekly.push(row); weeklySignals.add(s.id); }
+    }
+    const weeks = [...new Set(weekly.map((w) => w.week_start))].sort();
+    const wk = (dock, list) => weekly.filter((w) => w.dock_id === dock && list.includes(w.week_start)).reduce((t, w) => t + +w.flights, 0);
+    const tiers = { regular: [], light: [], none: [], stopped: [] };
     for (const d of devices) {
-      const perMonth = dockLast3[d.dock_id] / Math.max(1, last3.length);
+      const perMonth = flights.length ? dockLast3[d.dock_id] / Math.max(1, last3.length) : (wk(d.dock_id, weeks.slice(-12)) / Math.max(1, Math.min(12, weeks.length))) * 4.3;
       tiers[perMonth >= 4 ? "regular" : perMonth > 0 ? "light" : "none"].push(d.dock_id);
+    }
+    // stopped: flew most nights (3+ a week) in the 4 weeks before, nothing in the last 2 weeks
+    const last2 = weeks.slice(-2), before4 = weeks.slice(-6, -2);
+    if (last2.length === 2 && before4.length) for (const d of devices) {
+      if (wk(d.dock_id, before4) / before4.length >= 3 && wk(d.dock_id, last2) === 0) {
+        for (const t of ["regular", "light"]) tiers[t] = tiers[t].filter((x) => x !== d.dock_id);
+        tiers.stopped.push(d.dock_id);
+      }
     }
     const neverFlew = devices.filter((d) => !byDock[d.dock_id]).map((d) => d.dock_id);
     const events = rec["device_events.csv"] ? parseCSV(rec["device_events.csv"].text) : [];
@@ -84,16 +116,22 @@ export function analyze(store, morning) {
       months: months.map((m) => ({ month: m, flights: byMonth[m].flights, docks_flying: byMonth[m].docks.size, scheduled: byMonth[m].scheduled, returned_early: byMonth[m].early })),
       docks: devices.map((d) => ({ dock: d.dock_id, flights_total: byDock[d.dock_id] || 0, flights_last3: dockLast3[d.dock_id], battery_warnings: batt[d.dock_id] || 0, connection_drops: conn[d.dock_id] || 0, offline_spells: offline[d.dock_id] || 0, last_seen: d.last_seen_online })),
       tiers, neverFlew, totalDocks: devices.length, flights: flights.length,
+      weeks: weeks.slice(-8).map((w) => ({ week: w, flights: weekly.filter((x) => x.week_start === w).reduce((t, x) => t + +x.flights, 0), docks_flying: new Set(weekly.filter((x) => x.week_start === w && +x.flights > 0).map((x) => x.dock_id)).size })),
+      notCommissioned: devices.filter((d) => "commissioned" in d && !d.commissioned).map((d) => d.dock_id),
     };
-    calc("tiers", `${tiers.regular.length} regular / ${tiers.light.length} light / ${tiers.none.length} idle docks (last 3 months)`, tiers, `flights.csv, ${last3[0]}…${last3.at(-1)}. Regular = 4+ flights a month on average; light = some flights; idle = none. Regular: ${tiers.regular.join(", ")}. Light: ${tiers.light.join(", ")}. Idle: ${tiers.none.join(", ") || "none"}.`, [pref("flights.csv"), pref("devices.json")]);
-    calc("never_flew", `${neverFlew.length} of ${devices.length} docks never flew (May–Oct)`, neverFlew.length, `Docks in devices.json with no row in flights.csv: ${neverFlew.join(", ") || "none"}`, [pref("flights.csv"), pref("devices.json")]);
+    if (!flights.length && weeks.length) usage.months = [];
+    calc("tiers", `${tiers.regular.length} regular / ${tiers.light.length} light / ${tiers.none.length} idle${tiers.stopped.length ? ` / ${tiers.stopped.length} stopped` : ""} docks`, tiers, `${flights.length ? `flights.csv, ${last3[0]}…${last3.at(-1)}` : "usage_weekly.csv, last 12 weeks"}. Regular = 4+ flights a month on average; light = some flights; idle = none.${tiers.stopped.length ? ` Stopped = flew 3+ times a week before, nothing in the last 2 weeks (${last2.join(", ")}, usage_weekly.csv incl. live-event rows).` : ""} Regular: ${tiers.regular.join(", ") || "none"}. Light: ${tiers.light.join(", ") || "none"}. Idle: ${tiers.none.join(", ") || "none"}.${tiers.stopped.length ? ` Stopped: ${tiers.stopped.join(", ")}.` : ""}`, [flights.length ? pref("flights.csv") : pref("usage_weekly.csv"), pref("devices.json"), ...weeklySignals]);
+    if (flights.length) calc("never_flew", `${neverFlew.length} of ${devices.length} docks never flew (May–Oct)`, neverFlew.length, `Docks in devices.json with no row in flights.csv: ${neverFlew.join(", ") || "none"}`, [pref("flights.csv"), pref("devices.json")]);
     const lastM = usage.months.at(-1), prevM = usage.months.at(-2);
     if (lastM) calc("docks_flying_last", `${lastM.docks_flying} of ${devices.length} docks flew in ${lastM.month}`, lastM.docks_flying, `Distinct dock_id in flights.csv for ${lastM.month}; ${prevM ? `${prevM.docks_flying} in ${prevM.month}` : ""}`, [pref("flights.csv")]);
 
     // ---------- force-level log (verified file), if this account has one ----------
     let forceLog = null;
-    const flFile = (accountsDoc.files || []).find((f) => f.account === acc.id && S[`file_${f.id}`]?.text);
-    if (flFile) {
+    const flFile = allFiles.find((f) => f.account === acc.id && usageLogKind(S[`file_${f.id}`]?.text));
+    if (flFile && usageLogKind(S[`file_${flFile.id}`].text) === "site") {
+      forceLog = cleanSiteLog(S[`file_${flFile.id}`].text);
+      forceLog.file = flFile.id;
+    } else if (flFile) {
       forceLog = cleanForceLog(S[`file_${flFile.id}`].text);
       forceLog.file = flFile.id;
       const forces = [...new Set(forceLog.rows.map((r) => r.force))];
@@ -133,20 +171,31 @@ export function analyze(store, morning) {
           const op = forceLog.summary.filter((f) => f.operational), idle = forceLog.summary.filter((f) => !f.operational);
           const opDocks = op.reduce((s, f) => s + f.docks, 0), idleDocks = idle.reduce((s, f) => s + f.docks, 0);
           d.backed = opDocks * perDock; d.at_risk = idleDocks * perDock;
-          const c1 = calc("renewal_backed", `Backed renewal: ${money(d.backed)}`, d.backed, `${op.map((f) => `${f.force} ${f.docks}`).join(" + ")} = ${opDocks} docks at forces flying live missions (${forceLog.file}) × ${money(perDock)} per dock`, [forceLog.file, `calc:${acc.id}:per_dock`, ...acc.facts.filter((f) => f.status === "verified").map((f) => f.id)]);
+          const unitWord = forceLog.unit === "site" ? "sites" : "forces";
+          const c1 = calc("renewal_backed", `Backed renewal: ${money(d.backed)}`, d.backed, `${op.map((f) => `${f.force} ${f.docks}`).join(" + ")} = ${opDocks} docks at ${unitWord} flying live missions (${forceLog.file}) × ${money(perDock)} per dock`, [forceLog.file, `calc:${acc.id}:per_dock`, ...acc.facts.filter((f) => f.status === "verified").map((f) => f.id)]);
           const c2 = calc("renewal_at_risk", `Renewal at risk: ${money(d.at_risk)}`, d.at_risk, `${idle.map((f) => `${f.force} ${f.docks}`).join(" + ")} = ${idleDocks} docks with zero live missions in ${forceLog.months.length} months (${forceLog.file}) × ${money(perDock)}`, [forceLog.file, `calc:${acc.id}:per_dock`, "rc_appetite_2", "km_others_2"].filter((x) => E[x]));
+          forceLog.unitWord = unitWord;
           d.basis.push(c1, c2);
         } else {
           const reg = tiers.regular.length;
           d.backed = reg * perDock; d.at_risk = (devices.length - reg) * perDock;
           d.basis.push(calc("renewal_backed", `Backed renewal: ${money(d.backed)}`, d.backed, `${reg} docks in regular use (${tiers.regular.join(", ")}) × ${money(perDock)} per dock`, [`calc:${acc.id}:tiers`, `calc:${acc.id}:per_dock`]));
-          d.basis.push(calc("renewal_at_risk", `Renewal at risk: ${money(d.at_risk)}`, d.at_risk, `${tiers.light.length} light-use docks + ${tiers.none.length} idle docks × ${money(perDock)}. Light use averages under 4 flights a month — hard to defend to a finance team asking for cost by plant.`, [`calc:${acc.id}:tiers`, `calc:${acc.id}:per_dock`]));
+          d.basis.push(calc("renewal_at_risk", `Renewal at risk: ${money(d.at_risk)}`, d.at_risk, `${tiers.stopped.length ? `${tiers.stopped.length} docks that stopped flying + ` : ""}${tiers.light.length} light-use docks + ${tiers.none.length} idle docks × ${money(perDock)}. Light use averages under 4 flights a month — hard to defend to a finance team asking for cost per site.`, [`calc:${acc.id}:tiers`, `calc:${acc.id}:per_dock`, ...weeklySignals]));
         }
       }
       if (o.worth_up_to != null) d.worth_up_to = o.worth_up_to;
+      d.deadline = deadlines.find((x) => x.deal === o.id) || null;
       for (const fid of o.evidence) { const f = acc.facts.find((x) => x.id === fid); if (f && f.status === "claim") d.claimed.push({ text: f.text, by: f.said_by, id: f.id }); }
       if (dbf[o.id]) { d.debrief = dbf[o.id]; d.cites.push(dbf[o.id].id); }
       deals.push(d);
+    }
+    // No renewal deal on file (e.g. a reseller account): still show the current contract, valued by usage.
+    if (annual && !deals.some((d) => d.contracted)) {
+      const reg = tiers.regular.length;
+      const d = { id: `contract:${acc.id}`, synthetic: true, title: `Current contract — keep it (term ends ${termEnds ? fmtDate(termEnds) : "—"})`, stage: "current", contracted: annual, backed: reg * (perDock || 0), at_risk: annual - reg * (perDock || 0), evidence: [], cites: [pref("contract.txt"), pref("profile.json")], claimed: [], basis: [] };
+      d.basis.push(calc("renewal_backed", `Backed by usage: ${money(d.backed)}`, d.backed, `${reg} of ${devices.length} docks in regular use × ${money(perDock)} per dock`, [`calc:${acc.id}:tiers`, `calc:${acc.id}:per_dock`]));
+      d.basis.push(calc("renewal_at_risk", `Contract at risk: ${money(d.at_risk)}`, d.at_risk, `${devices.length - reg} docks not in regular use${usage.notCommissioned.length ? ` (${usage.notCommissioned.join(", ")} never commissioned)` : ""} × ${money(perDock)}. Paid, but nothing flies to show for it.`, [`calc:${acc.id}:tiers`, `calc:${acc.id}:per_dock`, pref("devices.json")]));
+      deals.unshift(d);
     }
     // deals only the debrief knows about (never heard of in discovery)
     for (const d of Object.values(dbf)) if (!deals.find((x) => x.id === d.deal)) deals.push({ id: d.deal, title: d.title, stage: "unknown — never heard of", debrief: d, cites: [d.id], backed: 0, at_risk: 0, claimed: [], basis: [], unknown: true });
@@ -196,7 +245,21 @@ export function analyze(store, morning) {
         add("Champion (signed last order)", "Stefan Roy", "Signed the 2026 order from the group security budget; 0 platform sign-ins in 90 days", [pref("contract.txt"), pref("users.json")]);
         add("Could block", "Nadia Rahman", "Group Finance asked for cost per plant before any renewal is raised; unverified €1.2M savings claim", [pref("emails/2026-10-08_finance_mailbox.txt"), "sr_roi_0"]);
       }
+      // No debrief (new accounts): infer from what people said and their roles.
+      if (!db) {
+        const said = (p) => acc.facts.filter((f) => f.said_by === p.name);
+        for (const p of people.filter((p) => p.met)) {
+          const sign = said(p).find((f) => /\b(signs?|sign off|votes?|approv|budget|pays?)\b/i.test(f.text));
+          if (sign && (/renew|spend|budget|sign/i.test(sign.text) || (d.evidence || []).includes(sign.id))) add("Decides & pays", p.name, sign.text, [sign.id]);
+          else if (/finance|chair|board|controller/i.test(p.role)) add("Pays", p.name, `${p.role} — signs off money`, [p.id]);
+          const blockF = said(p).find((f) => (d.evidence || []).includes(f.id) && /cannot|not been|not declared|never|until|no record|nobody/i.test(f.text));
+          if (/data protection|privacy|insurance|IT |infrastructure|legal|procurement/i.test(p.role + " ") && (blockF || /yard|privacy|insur|network|renew|live|go-live|flying/i.test(d.title + " " + (d.blocker?.text || "")))) add("Could block", p.name, blockF ? blockF.text : `${p.role}: must be satisfied first`, [blockF?.id || p.id]);
+          if (/manager|operations|estate|contractor|unit|plant/i.test(p.role) && !/finance|IT |infrastructure|data protection|insurance/i.test(p.role + " ")) add("Uses", p.name, p.role, [p.id, ...said(p).filter((f) => (d.evidence || []).includes(f.id)).map((f) => f.id).slice(0, 1)]);
+        }
+      }
       const champ = people.filter((p) => p.met && (p.relationship === "warm" || p.relationship === "ally"));
+      const best = champ.sort((x, y) => ["ally", "warm"].indexOf(x.relationship) - ["ally", "warm"].indexOf(y.relationship))[0];
+      if (!db) for (const c of best ? [best] : []) if (!roles.find((r) => r.name === c.name && /champion/i.test(r.role))) add("Champion", c.name, `${c.relationship} — strongest relationship on the account`, [c.id]);
       for (const c of champ) if (!roles.find((r) => r.name === c.name)) if (/westmere|renew/i.test(d.title)) add("Champion", c.name, `${c.relationship} — strongest relationship on the account`, [c.id]);
       // de-dup by role+who
       const seen = new Set();
@@ -263,6 +326,14 @@ export function analyze(store, morning) {
     // claims carrying deals
     for (const d of deals) for (const c of d.claimed || []) risk({ id: `risk:${acc.id}:claim:${d.id}:${c.id}`, level: "amber", type: "Unverified", title: `${d.title} leans on a claim`, detail: `“${c.text}” — ${c.by}. Status: claim; nothing on file backs it.`, turns_bad: null, deals: [d.id], cites: [c.id, d.id] });
     for (const c of claimsApart.filter((c) => !c.told && !deals.some((d) => d.claimed?.find((x) => x.id === c.id)))) risk({ id: `risk:${acc.id}:claim:${c.id}`, level: "amber", type: "Unverified", title: `Claim in circulation: “${c.text}”`, detail: `${c.by}. Nothing on file backs it. Do not quote it in a proposal or case study.`, turns_bad: null, deals: [], cites: [c.id] });
+    // account deadlines (from the account itself, minutes after release → dates)
+    for (const d of deadlines.filter((d) => d.date && !d.passed)) {
+      const left = days(asOf, d.date);
+      if (left > 180) continue;
+      risk({ id: `risk:${acc.id}:dl:${d.id}`, level: left <= 14 ? "red" : "amber", type: "Deadline", title: `${d.text} — ${fmtDate(d.date)}`, detail: `${left < 0 ? `${-left} days ago` : left === 0 ? "Today" : `In ${left} days`}.${d.deal ? ` Deal: ${acc.opportunities.find((o) => o.id === d.deal)?.title}.` : ""}`, turns_bad: d.date, turns_bad_why: "The date set by the customer", deals: d.deal ? [d.deal] : [], cites: [d.id, d.deal].filter(Boolean) });
+    }
+    if (tiers.stopped.length) risk({ id: `risk:${acc.id}:stopped`, level: "red", type: "Usage falling", title: `${tiers.stopped.length} docks that flew most nights have stopped: ${tiers.stopped.join(", ")}`, detail: `Nothing flown in the last 2 weeks (${last2.join(", ")}); all still online. No ticket raised and nobody at the customer has said anything. ${money(tiers.stopped.length * (perDock || 0))} of the renewal rests on them.`, turns_bad: addDays(asOf, 7), turns_bad_why: "A silent stop that runs into a renewal reads as a programme nobody uses", deals: deals.filter((d) => /renew/i.test(d.title)).map((d) => d.id), cites: [`calc:${acc.id}:tiers`, ...weeklySignals] });
+    if (usage.notCommissioned.length) risk({ id: `risk:${acc.id}:uncommissioned`, level: "red", type: "Not used", title: `${usage.notCommissioned.join(", ")} never commissioned — has never flown`, detail: `Paid for and online since ${devices[0]?.registered || "install"}, but no commissioning flight is on record, so it cannot fly patrols. ${weeks.length ? `${weeks.length} weeks of zero flights.` : ""}`, turns_bad: deadlines.filter((x) => x.date && x.date >= asOf).map((x) => x.date).sort()[0] || null, turns_bad_why: "The next customer date will ask why it has never flown", deals: deals.map((d) => d.id).slice(0, 1), cites: [pref("devices.json"), pref("usage_weekly.csv")] });
     const lvl = { red: 0, amber: 1, green: 2 };
     risks.sort((a, b) => lvl[a.level] - lvl[b.level] || String(a.turns_bad || "9").localeCompare(String(b.turns_bad || "9")));
 
@@ -287,7 +358,7 @@ export function analyze(store, morning) {
         const db = dbf[deals.find((d) => /renew/i.test(d.title))?.id];
         move({ id: `mv:${s.id}`, title: `Get the renewal proposal to Rhys Calder before he hands over — with ${db?.unlock_evidence?.join(" + ") || "the usage evidence"}`, why: `${db?.unlock || ""} He leaves in January and "anything we have agreed stands" — so get it agreed now, and ask him in the same note to name his successor and introduce the procurement lead (Hannah Doyle per debrief) and each force's finance contact.`, owner: owner(commercial), with: [you], due: addDays(asOf, 9), deal: db?.deal, value: dealValue(db?.deal), urgency: 2.5, cites: [s.id, db?.id, ...(db?.unlock_evidence || []), "rc_funding_2", "dbf_hannah_doyle"].filter(Boolean) });
       }
-      if (!/this week|urgent|moving on|leaves|another role/i.test(text)) move({ id: `mv:${s.id}`, title: `Act on: ${s.title}`, why: s.summary, owner: you, due: addDays(s.dated, 3), deal: null, value: 0, urgency: 1.5, cites: [s.id] });
+      if (!/this week|urgent|moving on|leaves|another role/i.test(text) && !weeklySignals.has(s.id)) move({ id: `mv:${s.id}`, title: `Act on: ${s.title}`, why: s.summary, owner: you, due: addDays(s.dated, 3), deal: null, value: 0, urgency: 1.5, cites: [s.id] });
     }
     // unblock each deal (debrief knows the blocker / decider)
     for (const d of deals.filter((d) => d.debrief && !d.unknown)) {
@@ -320,18 +391,67 @@ export function analyze(store, morning) {
       if (!decider?.met && bridge) why += ` Route in: ${bridge.name} (${bridge.relationship}).`;
       move({ id: `mv:unblock:${d.id}`, title, why, owner: who, with: [], due, deal: d.id, value: dealValue(d.id), urgency: days(asOf, due) <= 3 ? 2.2 : 1.4, cites });
     }
+    const coveredOffers = new Set();
+    const handledReq = new Set();
+    // ---- generic rules (work for any account, incl. ones released mid-build) ----
+    const roleOf = (d, re) => power.find((p) => p.deal === d)?.roles.find((r) => re.test(r.role) && r.met)?.who;
+    const champName = people.filter((p) => p.met && ["ally", "warm"].includes(p.relationship))[0]?.name || people.find((p) => p.met)?.name;
+    const openReq = (re) => requests.find((r) => /open|pending/i.test(r.status) && re.test(r.summary + " " + r.from));
+    if (tiers.stopped.length) move({ id: `mv:${acc.id}:stopped`, topic: "stopped_docks", title: `Call ${champName} today: ${tiers.stopped.join(", ")} stopped flying two weeks ago`, why: `They flew most nights until two weeks ago; now nothing, though still online. No ticket and no word from the customer. Find out what changed (site, staff, weather, a fault) before anyone at the customer notices the renewal looks weaker.`, owner: you, with: [owner(se)], due: addDays(asOf, 1), deal: deals.find((d) => /renew/i.test(d.title))?.id, value: tiers.stopped.length * (perDock || 0), urgency: 2.6, cites: [`calc:${acc.id}:tiers`, ...weeklySignals] });
+    for (const d of deals.filter((d) => !d.debrief && d.blocker?.status === "open")) {
+      const b = d.blocker.text;
+      const dl = d.deadline?.date || deadlines.filter((x) => x.date && x.date >= asOf).map((x) => x.date).sort()[0];
+      const due = dl && days(asOf, dl) < 16 ? (days(asOf, dl) > 1 ? addDays(dl, -1) : dl) : addDays(asOf, 14);
+      let o = { topic: "blocker", title: `Clear the blocker on “${d.title}”: ${b}`, who: you, cites: [d.id, ...(d.evidence || []).slice(0, 3)] };
+      if (/pilot|certif|commission|insur/i.test(b)) {
+        const off = open.find((x) => /pilot|certif|train/i.test(x.title)); if (off) coveredOffers.add(off.id);
+        o = { topic: "golive", title: `Get ${usage.notCommissioned[0] || "the dock"} flying: a dated go-live plan for ${champName} — certify staff, commission, tell the insurer`, who: you, withs: [owner(se)], cites: [d.id, ...(d.evidence || []).filter((e) => E[e]).slice(0, 4), off?.id].filter(Boolean) };
+        const plan = deadlines.find((x) => /go-live|plan/i.test(x.text)); if (plan) { o.cites.push(plan.id); plan._covered = true; }
+        const ask = openReq(/flying|start|go-live|when/i); if (ask) { handledReq.add(ask.request_id); o.cites.push(pref("requests.csv")); }
+      } else if (/privacy|assessment|document|data/i.test(b)) {
+        const rq = openReq(/document|privacy|footage|questions|data/i); if (rq) handledReq.add(rq.request_id);
+        const blocker = roleOf(d.id, /could block/i);
+        o = { topic: "privacy_docs", title: `Send ${blocker || "the data protection lead"} the data retention and storage details${rq ? ` — answer ${rq.request_id} (open ${days(rq.opened, asOf)} days)` : ""}`, who: owner(lead), withs: [owner(se)], cites: [d.id, ...(d.evidence || []).filter((e) => E[e]).slice(0, 3), rq && E[rq.request_id] ? rq.request_id : pref("requests.csv")].filter(Boolean) };
+      } else if (/saving|finance|value|cost/i.test(b)) {
+        const payer = roleOf(d.id, /pays|decides/i);
+        o = { topic: "finance_value", title: `Give ${payer || "finance"} a value case built from flight records — not the headline saving`, who: owner(commercial), withs: [you], cites: [d.id, forceLog?.file, `calc:${acc.id}:per_dock`, ...acc.facts.filter((f) => f.status === "claim" && /sav/i.test(f.text)).map((f) => f.id)].filter(Boolean) };
+      }
+      move({ id: `mv:unblock:${d.id}`, topic: o.topic, title: o.title, why: `Blocker on file: ${b}.${d.deadline ? ` Customer date: ${d.deadline.text}, ${fmtDate(d.deadline.date)}.` : ""}${d.worth_up_to ? ` Worth up to ${money(d.worth_up_to)}.` : ""}`, owner: o.who, with: o.withs || [], due, deal: d.id, value: d.contracted || d.worth_up_to || 0, urgency: days(asOf, due) <= 3 ? 2.4 : 1.4, cites: o.cites });
+    }
+    for (const dl of deadlines.filter((x) => x.date && !x.passed && !x._covered && days(asOf, x.date) <= 100 && days(asOf, x.date) >= 0)) {
+      const t = dl.text;
+      let o = null;
+      if (/contractor|leaves/i.test(t)) {
+        const who = people.find((p) => /contractor/i.test(p.role))?.name || "the contractor";
+        const off = open.find((x) => /playbook|rollout|rota/i.test(x.title)); if (off) coveredOffers.add(off.id);
+        o = { topic: "knowledge_capture", title: `Write down ${who}'s launch steps, patrol routes and alert rota before he leaves`, who: owner(se), withs: [you], cites: [dl.id, ...acc.facts.filter((f) => /head|written down|contract ends/i.test(f.text)).map((f) => f.id), off?.id].filter(Boolean) };
+      } else if (/board|vote/i.test(t)) {
+        const chair = people.find((p) => /chair|board/i.test(p.role))?.name || "the board chair";
+        o = { topic: "board_brief", title: `Brief ${chair} before the residents' board vote: what it costs, what it will do, when it flies`, who: you, withs: [], cites: [dl.id, ...acc.facts.filter((f) => /board|resident/i.test(f.text)).map((f) => f.id)] };
+      } else if (/network|segment/i.test(t)) {
+        const it = people.find((p) => /IT|infrastructure/i.test(p.role))?.name || "IT";
+        o = { topic: "network_register", title: `Register the docks with ${it} before the network change`, who: owner(se), withs: [], cites: [dl.id, ...acc.facts.filter((f) => /network|IT /i.test(f.text)).map((f) => f.id)] };
+      } else if (/go-live|plan/i.test(t)) {
+        o = { topic: "golive", title: `Send ${champName} the written go-live plan`, who: you, withs: [owner(se)], cites: [dl.id] };
+      }
+      if (!o) continue;
+      const left = days(asOf, dl.date);
+      move({ id: `mv:dl:${dl.id}`, topic: o.topic, title: o.title, why: `Customer date: ${t} — ${fmtDate(dl.date)} (in ${left} days).`, owner: o.who, with: o.withs, due: left > 7 ? addDays(dl.date, -7) : left > 1 ? addDays(dl.date, -1) : dl.date, deal: dl.deal || deals[0]?.id, value: dealValue(dl.deal) || annual * 0.3, urgency: left <= 14 ? 2.2 : 1.3, cites: o.cites });
+    }
+    for (const o of open) {
+      if (coveredOffers.has(o.id)) continue;
+      const p = person(o.pitch_to);
+      if (!(o.pitch_to === "Beatriz Alonso" && E["FB-10944"])) { move({ id: `mv:offer:${o.id}`, topic: "offer_discovery", title: `Find the need first, then offer “${o.title}” to ${o.pitch_to}`, why: `Open offer ${money(o.value)}. ${p ? `${p.name} is ${p.relationship}. ` : ""}Ask what problem it solves for them before pitching — an offer pitched too early stalls.`, owner: you, due: addDays(asOf, 10), deal: o.id, value: o.value, urgency: 1.0, cites: [o.id, p?.id].filter(Boolean) }); continue; }
+      move({ id: `mv:offer:${o.id}`, title: `Ask ${o.pitch_to} why she changed the night-alert recipients — then position ${o.title}`, why: `Open offer ${money(o.value)}. ${p ? `${p.name} is ${p.relationship}; ` : ""}she asked support to send night alerts to more than one person (FB-10944) and nobody asked why. Learn the problem before pitching (pitching early put the idle-plants deal at risk).`, owner: you, due: addDays(asOf, 10), deal: o.id, value: o.value, urgency: 1.0, cites: [o.id, "beatriz_alonso", "FB-10944", pref("emails/2026-09-18_beatriz_alerts.txt"), "dbf_b_idle_plants"] });
+    }
     // unanswered requests not already covered
     for (const r of requests.filter((r) => /open|pending/i.test(r.status))) {
-      if (moves.some((m) => m.why.includes(r.request_id) && r.request_id !== "(none)") || r._signal) continue;
+      if (moves.some((m) => (m.why.includes(r.request_id) || m.title.includes(r.request_id)) && r.request_id !== "(none)") || r._signal || handledReq.has(r.request_id)) continue;
       if (/finance/i.test(r.from) && moves.some((m) => /Group Finance/.test(m.title))) continue;
       if (/case study/i.test(r.summary)) { move({ id: `mv:req:casestudy`, title: "Agree with Stefan Roy what the case study can stand on: savings working + one plant willing to be quoted", why: `${r.summary} Open ${days(r.opened, asOf)} days. Do not publish the €1.2M headline (claim, no working). Offer a usage-based draft from flights.csv instead — and use it to open a conversation with Finance and Insurance (debrief: the sister-company and insurance-discount deals come up with Nadia Rahman / Julian Tate).`, owner: you, with: [owner(gtm)], due: addDays(asOf, 7), deal: "b_case_study", value: 0.2 * annual, urgency: 1.1, cites: [pref("requests.csv"), "sr_roi_0", pref("emails/2026-09-22_stefan_case_study.txt"), "dbf_b_case_study", "dbf_door_stefan"] }); continue; }
       move({ id: `mv:req:${r.request_id}:${r.opened}`, title: `${r.request_id === "(none)" ? "Reply" : `Close out ${r.request_id}`}: ${r.from} — ${r.summary.split(".")[0]}`, why: `${r.summary} Open ${days(r.opened, asOf)} days.`, owner: /pending customer/i.test(r.status) ? owner(se) : you, due: addDays(asOf, 5), deal: deals.find((d) => /renew/i.test(d.title))?.id, value: 0.15 * dealValue(deals.find((d) => /renew/i.test(d.title))?.id), urgency: 1.2, cites: [pref("requests.csv"), E[r.request_id] ? r.request_id : null].filter(Boolean) });
     }
     // open offers -> pitch when ready
-    for (const o of open) {
-      const p = person(o.pitch_to);
-      move({ id: `mv:offer:${o.id}`, title: `Ask ${o.pitch_to} why she changed the night-alert recipients — then position ${o.title}`, why: `Open offer ${money(o.value)}. ${p ? `${p.name} is ${p.relationship}; ` : ""}she asked support to send night alerts to more than one person (FB-10944) and nobody asked why. Learn the problem before pitching (pitching early put the idle-plants deal at risk).`, owner: you, due: addDays(asOf, 10), deal: o.id, value: o.value, urgency: 1.0, cites: [o.id, "beatriz_alonso", "FB-10944", pref("emails/2026-09-18_beatriz_alerts.txt"), "dbf_b_idle_plants"] });
-    }
     // usage promise broken (A) — monthly summary
     const summaries = (data("mail_log.json")?.mail || []).filter((m) => /usage summary/i.test(m.subject || ""));
     if (summaries.length && forceLog) move({ id: `mv:${acc.id}:summary`, title: "Restart the monthly usage summary — split by force this time", why: `Promised monthly; last sent ${summaries.at(-1).date}. Rhys asked for it by force (2 Jun) and the board "loves a chart" (FR-011). The cleaned force log now makes that possible: it is also the renewal evidence.`, owner: you, due: addDays(asOf, 12), deal: deals.find((d) => /renew/i.test(d.title))?.id, value: 0.1 * annual, urgency: 1, cites: [pref("mail_log.json"), pref("calls/2026-06-02_check_in.txt"), forceLog.file] });
@@ -363,7 +483,8 @@ export function analyze(store, morning) {
       if (/group IT/i.test(t)) return { who: "Support desk via FB-10903; debrief names Owen Fitch", cite: "dbf_owen_fitch" };
       if (/plant other than/i.test(t)) return { who: "Beatriz Alonso (Plant 7) and the deputy", cite: "beatriz_alonso" };
       if (/Metro Central, Tarn Valley or Norwold/i.test(t)) return { who: "Insp. Karen Mbeki (warm), Ewan Brooks, Fatima Osei — all met this morning", cite: "karen_mbeki" };
-      return { who: "Unknown", cite: pref("profile.json") };
+      const w = people.filter((p) => p.met).sort((a, b) => ["ally", "warm", "neutral", "guarded"].indexOf(a.relationship) - ["ally", "warm", "neutral", "guarded"].indexOf(b.relationship))[0];
+      return w ? { who: `${w.name} (${w.role}, ${w.relationship})`, cite: w.id } : { who: "Unknown", cite: pref("profile.json") };
     };
     for (const t of profile.not_on_file || []) {
       const w = whoFor(t);
@@ -401,7 +522,7 @@ export function analyze(store, morning) {
 
     const red = risks.filter((r) => r.level === "red").length;
     out.push({
-      id: acc.id, name: acc.name, currency: profile.currency, symbol: cur, sector: profile.sector, official_story: acc.official_story,
+      id: acc.id, name: acc.name, released: !!acc._released, facts: acc.facts, deadlines, currency: profile.currency, symbol: cur, sector: profile.sector, official_story: acc.official_story,
       what_they_bought: profile.what_they_bought, term_ends: termEnds, days_to_renewal: termEnds ? days(asOf, termEnds) : null, annual, perDock,
       health: { red, amber: risks.filter((r) => r.level === "amber").length, label: red >= 3 ? "At risk" : red ? "Needs attention" : "Healthy" },
       book, power, moves, risks, gaps, growth, people, usage, forceLog, timeline, keyDates, signals: accSignals.map((s) => s.id),

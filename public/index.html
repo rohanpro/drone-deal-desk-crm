@@ -224,7 +224,7 @@ const av = (n, size = 28) => `<span class="av" style="background:${avColor(n)};w
 const lvl = { red: "c-red", amber: "c-amber", green: "c-green" };
 const acc = (id) => S.accounts.find((a) => a.id === id);
 const K = (a, n) => n == null ? "—" : n >= 1e6 ? `${a.symbol}${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${a.symbol}${Math.round(n / 1e3)}k` : `${a.symbol}${Math.round(n)}`;
-const shortName = (a) => a.id === "A" ? "Eastern Counties" : "Aldermoor";
+const shortName = (a) => a.short || a.name;
 
 // Sources: shown as a small 📎 chip with a human label; full record in the drawer.
 function src(ids, label) {
@@ -282,7 +282,7 @@ const status = (m) => C.tasks[m.id]?.status || "todo";
 const isMine = (m) => !me?.role || m.role === me.role || (m.withRoles || []).includes(me.role) || me.role === "Sales Manager";
 async function setStatus(id, st) {
   await fetch("/api/task", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, status: st, by: me?.name || "Guest", role: me?.role || "" }) });
-  if (st === "done") toast("Nice work — +10 points for the team 🚀");
+  if (st === "done") toast("Nice work — +10 points, and it's logged back to Account Quest 🚀");
   loadCollab();
 }
 function dueChip(d) {
@@ -320,10 +320,21 @@ function renderToday() {
   const reds = S.accounts.flatMap((a) => a.risks.filter((r) => r.level === "red").map((r) => ({ ...r, a }))).sort((x, y) => String(x.turns_bad || "9").localeCompare(String(y.turns_bad || "9"))).slice(0, 5);
   const board = Object.entries(C.points).sort((a, b) => b[1] - a[1]).slice(0, 5);
   const hr = new Date().getHours();
+  const P = S.portfolio;
+  const week = [...moves.filter((m) => daysTo(m.due) <= 7 && status(m) !== "done").map((m) => ({ date: m.due, kind: "do", text: m.short, who: m.owner.name, acc: m.acc })), ...P.deadlines.filter((d) => daysTo(d.date) <= 7).map((d) => ({ date: d.date, kind: "customer", text: d.text, acc: acc(d.acc) }))].sort((x, y) => x.date.localeCompare(y.date));
+  const fresh = S.accounts.filter((a) => a.released);
   $("#main").innerHTML = topbar(`Good ${hr < 12 ? "morning" : hr < 18 ? "afternoon" : "evening"}, ${esc(me?.name || "team")} 👋`, `Here is what needs you, as of ${DY(S.asOf)}.`) + `
+  ${fresh.length ? `<div class="card" style="border-left:4px solid var(--orange);margin-bottom:16px"><b>🆕 New accounts picked up automatically:</b> ${fresh.map((a) => `<a href="#" onclick="go('acct:${a.id}','overview');return false">${esc(a.name)}</a>`).join(" · ")} <span class="small muted">— already analysed, with actions and risks below.</span></div>` : ""}
+  <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px">
+    ${P.currencies.map((c) => `<div class="card"><div class="small muted">Book in ${c.currency} · ${c.accounts.length} account${c.accounts.length > 1 ? "s" : ""}</div><div class="mid">${c.symbol}${Math.round(c.backed / 1000)}k <span class="small muted" style="font-weight:500">backed</span></div><div class="small"><span style="color:var(--red)">${c.symbol}${Math.round(c.atRisk / 1000)}k at risk</span> · ${c.symbol}${Math.round(c.annual / 1000)}k/yr</div></div>`).join("")}
+    <div class="card"><div class="small muted">Renewals in 120 days</div><div class="mid">${P.renewals120.length}</div><div class="small">${P.renewals120.map((x) => `${esc(x.short)} ${x.days}d`).join(" · ") || "none"}</div></div>
+    <div class="card"><div class="small muted">Urgent risks</div><div class="mid" style="color:var(--red)">${P.red}</div><div class="small">${P.dueThisWeek} actions due in 7 days</div></div>
+  </div>
+  <div class="card" style="margin-bottom:16px"><h3>🗓️ This week <span class="sub">your team's due actions and the customers' own dates</span></h3>
+    ${week.length ? week.map((w) => `<div class="li" style="padding:8px 0"><span class="pill ${daysTo(w.date) < 0 ? "c-red" : daysTo(w.date) <= 1 ? "c-orange" : "c-blue"}" style="min-width:74px;justify-content:center">${daysTo(w.date) < 0 ? `${-daysTo(w.date)}d late` : daysTo(w.date) === 0 ? "Today" : D(w.date)}</span><div class="body small"><b>${w.kind === "customer" ? "📌 Customer date: " : ""}${esc(w.text)}</b> <span class="muted">· ${esc(shortName(w.acc))}${w.who ? ` · ${esc(w.who)}` : ""}</span></div></div>`).join("") : '<p class="empty">Nothing due in the next 7 days.</p>'}</div>
   <div class="grid g2">${S.accounts.map((a) => `<div class="card" style="cursor:pointer" onclick="go('acct:${a.id}','overview')">
     <div class="row" style="flex-wrap:nowrap"><div class="ring" style="--p:${a.healthScore.score};--col:var(--${a.healthScore.color === "green" ? "green" : a.healthScore.color === "amber" ? "amber" : "red"})"><b>${a.healthScore.score}</b></div>
-      <div style="min-width:0"><div class="row"><b style="font-size:16px">${esc(a.name)}</b><span class="pill ${lvl[a.healthScore.color]}">${a.healthScore.label}</span></div>
+      <div style="min-width:0"><div class="row"><b style="font-size:16px">${esc(a.name)}</b><span class="pill ${lvl[a.healthScore.color]}">${a.healthScore.label}</span>${a.released ? '<span class="pill c-orange">New</span>' : ""}</div>
       <div class="small muted">Renews in <b style="color:var(--ink)">${a.days_to_renewal} days</b> · ${K(a, a.annual)}/year · ${esc(a.sector)}</div></div></div>
     <p style="margin:12px 0 0">${esc(a.summary)}</p></div>`).join("")}</div>
   <div class="grid g21" style="margin-top:16px">
@@ -377,7 +388,7 @@ function renderAccount(a) {
   const hc = a.healthScore.color;
   $("#main").innerHTML = topbar(esc(a.name), `${esc(a.sector)} · ${esc(a.currency)} · ${esc(a.what_they_bought)}`) + `
   <div class="hero"><div class="ring" style="--p:${a.healthScore.score};--col:var(--${hc === "green" ? "green" : hc === "amber" ? "amber" : "red"})"><b style="color:var(--ink)">${a.healthScore.score}</b></div>
-    <div style="flex:1;min-width:240px"><div class="row"><b style="font-size:18px">Health: ${a.healthScore.label}</b><span class="pill c-orange">Renews in ${a.days_to_renewal} days · ${D(a.term_ends)}</span></div>
+    <div style="flex:1;min-width:240px"><div class="row"><b style="font-size:18px">Health: ${a.healthScore.label}</b><span class="pill c-orange">Renews in ${a.days_to_renewal} days · ${D(a.term_ends)}</span>${a.released ? '<span class="pill c-blue">New account</span>' : ""}<button class="btn sm" style="background:transparent;color:#fff;border-color:#5a7299" onclick="copyBrief('${a.id}')">📋 Copy Monday brief</button></div>
       <p style="margin:8px 0 0;max-width:760px" class="sub">${esc(a.summary)}</p>
       <div class="life">${["Onboard", "Adopt", "Expand", "Renew"].map((l) => `<span class="${a.lifecycle.stage === l ? "on" : ""}">${l}</span>`).join("")}</div></div>
     <div style="text-align:right"><div class="sub small">Worth per year</div><div class="big">${K(a, a.annual)}</div><div class="sub small">${K(a, a.forecast.commit)} backed · ${K(a, a.book.at_risk)} at risk</div></div></div>
@@ -386,16 +397,16 @@ function renderAccount(a) {
 }
 function tOverview(a) {
   const col = { blue: "var(--sky)", violet: "var(--violet)", orange: "var(--orange)", red: "var(--red)", amber: "var(--amber)" };
-  const months = a.usage.months;
+  const months = a.usage.months.length ? a.usage.months : a.usage.weeks.map((w) => ({ month: w.week, docks_flying: w.docks_flying, weekly: true }));
   const mx = Math.max(...months.map((m) => m.docks_flying), 1);
   return `<h3 style="margin:0 0 10px">The five answers for Monday</h3>
   <div class="grid g5">${a.answers.map((x, i) => `<div class="card ans" style="--c:${col[x.color]}" onclick="setTab('${x.tab}')"><div class="q">${i + 1} · ${esc(x.q)}</div><div class="a">${esc(x.short)}</div><div class="m">${esc(x.more)}</div><div style="margin-top:8px">${src(x.cites)}</div></div>`).join("")}</div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h3>💚 Why the health score is ${a.healthScore.score}</h3>${a.healthScore.parts.map((p) => `<div style="margin:10px 0"><div class="row small"><b>${esc(p.name)}</b><span class="spacer"></span><b>${p.score}</b></div><div class="bar" style="margin:4px 0"><i style="width:${p.score}%;background:var(--${p.score >= 70 ? "green" : p.score >= 45 ? "amber" : "red"})"></i></div><div class="small muted">${esc(p.why)} ${src(p.cites)}</div></div>`).join("")}</div>
-    <div class="card"><h3>🛩️ Are they flying? <span class="sub">docks that flew each month (of ${a.usage.totalDocks})</span></h3>
-      <div style="display:flex;align-items:flex-end;gap:8px;height:130px;margin:18px 0 22px">${months.map((m) => `<div style="flex:1;text-align:center"><div class="small"><b>${m.docks_flying}</b></div><div style="height:${(100 * m.docks_flying) / mx}px;background:var(--sky);border-radius:6px 6px 0 0"></div><div class="small muted">${new Date(m.month + "-01T00:00:00Z").toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}</div></div>`).join("")}</div>
-      ${a.forceLog ? `<table><tr><th>Force</th><th>Docks</th><th>Live missions (6 mo)</th><th></th></tr>${a.forceLog.summary.map((f) => `<tr><td><b>${esc(f.force)}</b></td><td>${f.docks}</td><td>${f.live_missions}</td><td><span class="pill ${f.operational ? "c-green" : "c-red"}">${f.operational ? "Flying" : "Not flying"}</span></td></tr>`).join("")}</table>` : `<p class="small">${a.usage.tiers.regular.length} docks fly most nights, ${a.usage.tiers.light.length} fly a few times a month, ${a.usage.tiers.none.length} never.</p>`}
-      <div>${src([a.forceLog?.file, `${a.id}/flights.csv`].filter(Boolean))}</div></div>
+    <div class="card"><h3>🛩️ Are they flying? <span class="sub">docks that flew each ${a.usage.months.length ? "month" : "week"} (of ${a.usage.totalDocks})</span></h3>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:130px;margin:18px 0 22px">${months.map((m) => `<div style="flex:1;text-align:center"><div class="small"><b>${m.docks_flying}</b></div><div style="height:${(100 * m.docks_flying) / mx}px;background:var(--sky);border-radius:6px 6px 0 0"></div><div class="small muted">${m.weekly ? D(m.month) : new Date(m.month + "-01T00:00:00Z").toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}</div></div>`).join("")}</div>
+      ${a.forceLog ? `<table><tr><th>${a.forceLog.unit === "site" ? "Site" : "Force"}</th><th>Docks</th><th>Live missions (${a.forceLog.months.length} mo)</th><th></th></tr>${a.forceLog.summary.map((f) => `<tr><td><b>${esc(f.force)}</b></td><td>${f.docks}</td><td>${f.live_missions}</td><td><span class="pill ${f.operational ? "c-green" : "c-red"}">${f.operational ? "Flying" : "Not flying"}</span></td></tr>`).join("")}</table>` : `<p class="small">${a.usage.tiers.regular.length} dock(s) fly most nights, ${a.usage.tiers.light.length} a few times a month, ${a.usage.tiers.none.length} not at all${a.usage.tiers.stopped.length ? `, and <b style="color:var(--red)">${a.usage.tiers.stopped.length} stopped two weeks ago (${a.usage.tiers.stopped.join(", ")})</b>` : ""}.${a.usage.notCommissioned.length ? ` <b style="color:var(--red)">${a.usage.notCommissioned.join(", ")} has never been commissioned.</b>` : ""}</p>`}
+      <div>${src([a.forceLog?.file, `${a.id}/flights.csv`, `${a.id}/usage_weekly.csv`, `calc:${a.id}:tiers`].filter(Boolean))}</div></div>
   </div>
   <div class="card" style="margin-top:16px"><h3>📈 Grow this account <span class="sub">upsell and cross-sell</span></h3><div class="tw"><table><tr><th>Opportunity</th><th>Type</th><th>Size</th><th>Next step</th></tr>${a.growth.filter((g) => !/^Feature lever/.test(g.title)).map((g) => `<tr><td><b>${esc(g.title)}</b></td><td><span class="pill ${/Won/.test(g.kind) ? "c-green" : /Declined/.test(g.kind) ? "c-grey" : /Unverified/.test(g.kind) ? "c-amber" : "c-blue"}">${esc(g.kind.replace(/ — .*/, ""))}</span></td><td>${esc(g.sizing.replace(/^Debrief value .*/, "Not sized yet"))}</td><td class="muted">${esc(g.next)} ${src(g.cites)}</td></tr>`).join("")}</table></div></div>`;
 }
@@ -427,7 +438,7 @@ function tUnknowns(a) {
   return `<p class="muted" style="margin-top:0">What the plan rests on that we don't know yet — and exactly who to ask.</p><div class="grid g2">${a.gaps.map((g) => `<div class="card"><div class="small muted">We don't know</div><b>${esc(g.what)}</b><div class="small" style="margin-top:6px"><b>Why it matters:</b> ${esc(g.why)}</div><div class="row small" style="margin-top:8px"><span class="pill c-violet">Ask</span>${esc(g.who)}</div><div style="margin-top:6px">${src(g.cites)}</div></div>`).join("")}</div>`;
 }
 function ticketRows(list, showAcct) {
-  return `<div class="tw"><table><tr><th>Priority</th><th>Ticket</th>${showAcct ? "<th>Account</th>" : ""}<th>From</th><th>Waiting</th><th>Owner</th><th>Status</th><th></th></tr>${list.map((t) => `<tr><td><span class="pill c-${t.color}">${t.priority}</span></td><td><b>${esc(t.id)}</b><div class="small">${esc(t.subject)}</div></td>${showAcct ? `<td>${esc(shortName(t.a))}</td>` : ""}<td class="small">${esc(t.from)}</td><td>${t.open ? `<b style="color:var(--${t.age > 30 ? "red" : t.age > 7 ? "amber" : "ink"})">${esc(t.waiting)}</b>` : "—"}</td><td>${t.owner ? esc(t.owner) : t.open ? '<span class="pill c-red">Unassigned</span>' : "—"}</td><td class="small">${esc(t.status)}</td><td>${src(t.cites, "Open")}</td></tr>`).join("")}</table></div>`;
+  return `<div class="tw"><table><tr><th>Priority</th><th>Ticket</th>${showAcct ? "<th>Account</th>" : ""}<th>From</th><th>Waiting</th><th>Owner</th><th>Status</th><th></th></tr>${list.map((t) => `<tr><td><span class="pill c-${t.color}">${t.priority}</span></td><td><b>${esc(t.id)}</b><div class="small">${esc(t.subject)}</div></td>${showAcct ? `<td>${esc(shortName(t.a))}</td>` : ""}<td class="small">${esc(t.from)}</td><td>${t.open ? `<b style="color:var(--${t.age > 30 ? "red" : t.age > 7 ? "amber" : "ink"})">${esc(t.waiting)}</b>` : "—"}</td><td>${C.tickets?.[t.id] ? `${av(C.tickets[t.id].owner, 20)} ${esc(C.tickets[t.id].owner)}` : t.owner ? esc(t.owner) : t.open ? `<span class="pill c-red">Unassigned</span> <button class="btn sm" onclick="claimTicket('${esc(t.id)}')">Take it</button>` : "—"}</td><td class="small">${esc(t.status)}</td><td>${src(t.cites, "Open")}</td></tr>`).join("")}</table></div>`;
 }
 function tTickets(a) { return `<div class="card">${ticketRows(a.tickets, false)}</div>`; }
 function tHistory(a) {
@@ -455,7 +466,7 @@ function renderChat() {
   <div class="card chat" style="padding:0"><div class="chans">${CHANNELS().map(([k, l]) => `<button class="chan ${chatChan === k ? "on" : ""}" onclick="chatChan='${k}';renderChat()">${esc(l)}</button>`).join("")}
     <div class="small muted" style="margin-top:auto;padding:8px">Coach: ${S.assistant === "claude" ? "Claude AI" : "built-in"}</div></div>
     <div class="msgs"><div class="stream" id="stream"></div>
-    <div class="suggest">${(chatChan === "ask" || chatChan === "general" ? ["What do we do first?", "What could go wrong this week?", "Who decides the Aldermoor renewal?", "Draft the reply to Karen Mbeki"] : chatChan === "A" ? ["@flightdeck what's blocking Tarn Valley?", "@flightdeck who replaces Rhys?", "@flightdeck open tickets"] : ["@flightdeck how healthy is Aldermoor?", "@flightdeck what don't we know?", "@flightdeck upsell ideas"]).map((q) => `<button class="filter" onclick="sendChat(${JSON.stringify(q).replace(/"/g, "&quot;")})">${esc(q)}</button>`).join("")}</div>
+    <div class="suggest">${(chatChan === "ask" || chatChan === "general" ? ["What do we do first?", "What could go wrong this week?", ...S.accounts.slice(0, 2).map((a) => `Who decides at ${shortName(a)}?`)] : [`@flightdeck what do we do first at ${shortName(acc(chatChan))}?`, `@flightdeck what could go wrong at ${shortName(acc(chatChan))}?`, `@flightdeck what don't we know about ${shortName(acc(chatChan))}?`]).map((q) => `<button class="filter" onclick="sendChat(${JSON.stringify(q).replace(/"/g, "&quot;")})">${esc(q)}</button>`).join("")}</div>
     <div class="compose"><textarea id="chatIn" placeholder="${chatChan === "ask" ? "Ask anything about the accounts…" : "Message the team — add @flightdeck to ask the coach"}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea><button class="btn pri" onclick="sendChat()">Send</button></div></div></div>`;
   renderChatStream();
 }
@@ -506,6 +517,7 @@ function renderHow() {
   <h3>Health score</h3><p>Five parts, each 0–100:</p>
   <ul><li>Product use (30%)</li><li>Relationships (20%)</li><li>Access to decision makers (20%)</li><li>Support (15%)</li><li>Momentum (15%)</li></ul>
   <p>70+ is healthy, 45–69 needs watching, and below 45 is at risk.</p>
+  <h3>New data, no code change</h3><p>New accounts released during the build are picked up from the data service and analysed with the same rules. Customer deadlines given as "minutes from now" become real dates. New weekly usage that arrives in a live alert is folded in. A dock that flew most nights and then went silent for two weeks is flagged at once. Where there are no discovery notes, who decides and who pays is read from what people said (for example "Priya signs the renewal") and from their roles.</p>
   <h3>What it doesn't do yet</h3><p>It can't tell which dock sits at which force or plant, because the install sheets aren't on file. It can't read the content of ticket FB-10412. Its links between records are labelled "likely" where unproven.</p>
   <h3>For developers</h3><p class="small muted">Source code, rules and the MCP endpoint (<span class="mono">POST /mcp</span>) are in the public repository's README.</p></div>`;
 }
@@ -536,6 +548,8 @@ async function openRecord(id) {
 
 // ---------- actions ----------
 function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 3500); }
+async function claimTicket(id) { if (!me) return askWho(); await fetch("/api/ticket", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, owner: me.name, role: me.role }) }); toast(`${id} is yours — +3 points`); loadCollab(); }
+function copyBrief(id) { const a = acc(id); navigator.clipboard?.writeText(a.brief).then(() => toast("Monday brief copied — paste it to your manager"), () => toast("Couldn't copy")); }
 function copyDraft(id) { const m = allMoves().find((x) => x.id === id); const d = m.how.draft; navigator.clipboard?.writeText(`Subject: ${d.subject}\n\n${d.body}`).then(() => toast("Draft copied — paste it into your email"), () => toast("Couldn't copy — select the text instead")); }
 async function logToMcp(id) {
   const m = allMoves().find((x) => x.id === id);

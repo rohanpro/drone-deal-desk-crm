@@ -70,15 +70,16 @@ export async function ask({ question, history = [], state: st, collab }) {
 // Built-in coach: understands the common questions without an API key.
 export function ruleBased(question, state) {
   const q = question.toLowerCase();
-  const pick = /aldermoor|plant|stefan|beatriz|nadia|\bb\b|account b|euro|€/.test(q) ? ["B"] : /eastern|police|alliance|force|rhys|karen|westmere|tarn|norwold|metro|\ba\b|account a|£/.test(q) ? ["A"] : ["A", "B"];
-  const accs = state.accounts.filter((a) => pick.includes(a.id));
+  // pick accounts named in the question (by name, short name or a person on the account)
+  const named = state.accounts.filter((a) => [a.name, a.short, ...a.people.map((p) => p.name.split(" ").pop())].some((w) => w && q.includes(String(w).toLowerCase())));
+  const accs = named.length ? named : state.accounts;
   const c = (ids) => (ids || []).slice(0, 2).map((i) => `[${i}]`).join(" ");
   const d = (x) => (x ? new Date(x + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "");
   const out = [];
   let unknownIntent = false;
   for (const a of accs) {
     const head = accs.length > 1 ? `**${a.name}**\n` : "";
-    if (/first|next|do|today|todo|to-do|priority|plan|monday|action/.test(q)) out.push(head + a.moves.slice(0, 3).map((m) => `${m.rank}. **${m.short}**\n    ${m.owner.name} (${m.role}) · by ${d(m.due)} ${c(m.cites)}`).join("\n"));
+    if (/first|next|do|today|todo|to-do|priority|plan|monday|action/.test(q)) out.push(head + a.moves.slice(0, 3).map((m) => `${m.rank}. **${m.short}**\n    ${m.owner.name}${/\(/.test(m.owner.name) ? "" : ` (${m.role})`} · by ${d(m.due)} ${c(m.cites)}`).join("\n"));
     else if (/risk|wrong|worr|red|danger|late|deadline/.test(q)) out.push(head + a.risks.filter((r) => r.level === "red").slice(0, 4).map((r) => `• **${r.title}**${r.turns_bad ? ` — turns bad ${d(r.turns_bad)}` : ""} ${c(r.cites)}`).join("\n"));
     else if (/who|power|decide|sign|pay|buyer|champion|contact|people/.test(q)) out.push(head + a.answers[1].short + ". " + a.answers[1].more + " " + c(a.answers[1].cites));
     else if (/worth|value|book|revenue|money|forecast|commit|pipeline/.test(q)) out.push(head + `We can back **${a.answers[0].short.split(" · ")[0].replace(" we can back", "")}**: ${a.forecast.commitWhy}. At risk: ${a.answers[0].short.split(" · ")[1]?.replace(" at risk", "") || "—"} on docks nobody flies.${a.book.open_offers ? ` Open offers worth ${a.symbol}${Math.round(a.book.open_offers).toLocaleString("en-GB")} are pipeline, not counted.` : ""} ${c(a.forecast.cites)}`);

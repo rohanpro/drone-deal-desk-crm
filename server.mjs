@@ -17,7 +17,7 @@ const { store, startSync, onChange, queueNote } = await import("./src/sync.mjs")
 const { analyze } = await import("./src/analyze.mjs");
 const { mcpHandle } = await import("./src/mcp-server.mjs");
 const { enrich } = await import("./src/sales.mjs");
-const { collab, addMessage, setTask, publicCollab, onCollab } = await import("./src/collab.mjs");
+const { collab, addMessage, setTask, setTicketOwner, publicCollab, onCollab } = await import("./src/collab.mjs");
 const { ask, assistantMode } = await import("./src/assistant.mjs");
 
 const morning = JSON.parse(fs.readFileSync("seed/morning.json", "utf8"));
@@ -113,8 +113,21 @@ const server = http.createServer(async (req, res) => {
     }
     if (url.pathname === "/api/task" && req.method === "POST") {
       const b = await readBody(req);
+      const prev = collab.tasks[String(b.id || "")]?.status;
       const t = setTask({ id: String(b.id || ""), status: b.status, by: b.by, role: b.role });
-      return t ? send(res, 200, t) : send(res, 400, { error: "bad task" });
+      if (!t) return send(res, 400, { error: "bad task" });
+      // Finished work is logged back to Account Quest (one note per action, first time only).
+      if (b.status === "done" && prev !== "done" && process.env.AUTO_NOTES !== "0") {
+        const a = state().accounts.find((x) => x.moves.some((m) => m.id === b.id));
+        const m = a?.moves.find((x) => x.id === b.id);
+        if (m) queueNote({ account: a.id, kind: "task", title: `Done: ${m.short}`.slice(0, 150), text: `Marked done by ${t.by || "the team"}${t.role ? ` (${t.role})` : ""} in Flightdeck on ${t.at.slice(0, 10)}.\n${m.why}\nSources: ${m.cites.join(", ")}` });
+      }
+      return send(res, 200, t);
+    }
+    if (url.pathname === "/api/ticket" && req.method === "POST") {
+      const b = await readBody(req);
+      const t = setTicketOwner({ id: b.id, owner: b.owner, role: b.role });
+      return t ? send(res, 200, t) : send(res, 400, { error: "bad ticket" });
     }
     if (url.pathname === "/brand.svg") return send(res, 200, fs.readFileSync("public/brand.svg", "utf8"), "image/svg+xml");
     if (url.pathname === "/api/notes" && req.method === "POST") {

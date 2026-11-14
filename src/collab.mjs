@@ -7,7 +7,7 @@ const FILE = path.join(process.env.DATA_DIR || path.resolve("data"), "collab.jso
 fs.mkdirSync(path.dirname(FILE), { recursive: true });
 
 export const collab = (() => {
-  try { return JSON.parse(fs.readFileSync(FILE, "utf8")); } catch { return { messages: [], tasks: {}, points: {} }; }
+  try { return { tickets: {}, ...JSON.parse(fs.readFileSync(FILE, "utf8")) }; } catch { return { messages: [], tasks: {}, points: {}, tickets: {} }; }
 })();
 const save = () => fs.writeFileSync(FILE, JSON.stringify(collab));
 const listeners = new Set();
@@ -35,6 +35,14 @@ export function setTask({ id, status, by, role }) {
   return collab.tasks[id];
 }
 
+export function setTicketOwner({ id, owner, role }) {
+  const k = clean(id, 80); if (!k) return null;
+  collab.tickets[k] = { owner: clean(owner, 40), role: clean(role, 40), at: new Date().toISOString() };
+  collab.points[clean(owner, 40)] = (collab.points[clean(owner, 40)] || 0) + 3;
+  save(); emit({ type: "ticket", id: k });
+  return collab.tickets[k];
+}
+
 export function publicCollab() {
-  return { messages: collab.messages.slice(-300), tasks: collab.tasks, points: collab.points };
+  return { messages: collab.messages.slice(-300), tasks: collab.tasks, points: collab.points, tickets: collab.tickets };
 }

@@ -15,7 +15,7 @@ export const STAGES = [
   { key: "won", label: "Won", hint: "Signed or delivered." },
   { key: "lost", label: "Lost", hint: "Declined." },
 ];
-const STAGE_FROM_DATA = { identified: "discover", qualified: "qualify", cleared: "propose", agreed: "commit" };
+const STAGE_FROM_DATA = { identified: "discover", qualified: "qualify", cleared: "propose", agreed: "commit", current: "prove" };
 
 export const LIFECYCLE = ["Onboard", "Adopt", "Expand", "Renew"];
 
@@ -81,7 +81,7 @@ export function enrich(r, store) {
     const k = (n) => (n == null ? "—" : n >= 1e6 ? `${a.symbol}${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${a.symbol}${Math.round(n / 1e3)}k` : money(n));
     a.k = k;
     const person = (name) => a.people.find((p) => p.name === name || (name && p.name.endsWith(name)));
-    const renewal = a.book.deals.find((d) => /renew/i.test(d.title));
+    const renewal = a.book.deals.find((d) => /renew/i.test(d.title) || d.synthetic);
 
     // ---------- deals: stage, MEDDPICC, forecast ----------
     const pipeline = [];
@@ -91,21 +91,31 @@ export function enrich(r, store) {
       const ev = (d.evidence || []).map((id) => E[id]).filter(Boolean);
       const verified = ev.some((e) => e.status === "verified") || d.basis.length > 0;
       const told = ev.some((e) => e.status === "told");
-      const champ = a.power.find((p) => p.deal === d.id)?.roles.find((x) => /champion/i.test(x.role) || (x.role === "Uses" && ["warm", "ally"].includes(x.stance)));
-      const eb = db?.pays ? person(db.pays) : null;
-      const leaving = r.evidence.champion_leaves && db?.decides && /Rhys/.test(db.decides) && a.id === "A";
+      const roles = a.power.find((p) => p.deal === d.id)?.roles || [];
+      const champ = roles.find((x) => /champion/i.test(x.role) || (x.role === "Uses" && ["warm", "ally"].includes(x.stance)));
+      const payerName = db?.pays || roles.find((x) => /pays|decides/i.test(x.role) && x.name)?.name || null;
+      const eb = payerName ? person(payerName) : null;
+      const accSig = a.signals.map((id) => E[id]).filter(Boolean);
+      const leavingNames = accSig.filter((sg) => /moving on|leaves|leaving/i.test(sg.label + " " + sg.text)).map((sg) => sg.text);
+      const leaving = (n) => !!n && leavingNames.some((t) => t.includes(n.split(" ").pop()));
+      const facts = (re) => a.facts.filter((f) => re.test(f.text));
+      const procF = facts(/\b(signs?|vote|approv|budget|call-off|board|finance)\b/i);
+      const contract = E[`${a.id}/contract.txt`]?.text || "";
+      const signedBy = contract.match(/Signed:[^\n]*?by ([^\n,]+)/i)?.[1] || contract.match(/ordered through ([^\n,]+)/i)?.[1];
+      const isRenewal = /renew/i.test(d.title) || d.synthetic;
+      const sq = facts(/helicopter|guard|patrol hours|officer|staff time/i)[0];
       const m = [
         { k: "M", name: "Metrics", q: "Can we prove the value in numbers?", s: verified ? "green" : told ? "amber" : "red", note: verified ? "Usage numbers on file back it." : told ? "Only what people told us — no file yet." : "No numbers yet.", fix: "Pull usage by site and put it next to the price.", cites: d.basis.length ? d.basis.slice(0, 1) : (d.evidence || []).slice(0, 2) },
-        { k: "E", name: "Economic buyer", q: "Who signs off the money, and have we met them?", s: !eb ? "red" : !eb.met ? "red" : ["warm", "ally"].includes(eb.relationship) ? "green" : "amber", note: db?.pays ? `${db.pays}${eb && !eb.met ? " — never met" : eb ? ` — ${eb.relationship}` : ""}${leaving ? " — leaving in January" : ""}` : "Not known.", fix: db?.pays ? `Get time with ${db.pays}.` : "Ask the champion who signs.", cites: db ? [db.id] : [] },
-        { k: "D", name: "Decision criteria", q: "What must be true for them to say yes?", s: d.blocker?.status === "cleared" ? "green" : db?.blocker || d.blocker ? "amber" : "red", note: db?.blocker || d.blocker?.text || "Unknown.", fix: db?.blocker ? `Answer it: ${db.blocker}` : "Ask what a yes depends on.", cites: [db?.id, d.blocker ? d.id : null].filter(Boolean) },
-        { k: "D", name: "Decision process", q: "What steps and who, in what order?", s: a.id === "A" && E.rc_funding_2 && /renew|tender|westmere/i.test(d.title) ? "amber" : /renew/i.test(d.title) ? "amber" : "red", note: a.id === "A" && /renew|tender|westmere/i.test(d.title) ? "Each force's finance officer approves its own call-off; no pooled budget." : /renew/i.test(d.title) ? "New order needed before term ends; no auto-renew." : "Unknown.", fix: "Write the steps down with the customer (mutual action plan).", cites: a.id === "A" && /renew|tender|westmere/i.test(d.title) ? ["rc_funding_2", "hd_calloff_2"] : /renew/i.test(d.title) ? [`${a.id}/contract.txt`] : [] },
-        { k: "P", name: "Paper process", q: "How does the paperwork get signed?", s: /renew/i.test(d.title) ? "amber" : "red", note: /renew/i.test(d.title) ? `Last order signed by ${a.id === "A" ? "the alliance office" : "Stefan Roy"}; this time is unconfirmed.` : "Unknown.", fix: "Ask procurement/finance for the order route and lead time.", cites: /renew/i.test(d.title) ? [`${a.id}/contract.txt`] : [] },
+        { k: "E", name: "Economic buyer", q: "Who signs off the money, and have we met them?", s: !eb ? "red" : !eb.met ? "red" : ["warm", "ally"].includes(eb.relationship) ? "green" : "amber", note: payerName ? `${payerName}${eb && !eb.met ? " — never met" : eb ? ` — ${eb.relationship}` : ""}${leaving(payerName) ? " — leaving" : ""}` : "Not known.", fix: payerName ? `Get time with ${payerName}.` : "Ask the champion who signs.", cites: db ? [db.id] : roles.filter((x) => /pays|decides/i.test(x.role)).flatMap((x) => x.cites).slice(0, 2) },
+        { k: "D", name: "Decision criteria", q: "What must be true for them to say yes?", s: d.blocker?.status === "cleared" ? "green" : db?.blocker || d.blocker ? "amber" : "red", note: db?.blocker || d.blocker?.text || "Unknown.", fix: db?.blocker || d.blocker ? `Answer it: ${db?.blocker || d.blocker.text}` : "Ask what a yes depends on.", cites: [db?.id, d.blocker && !d.synthetic ? d.id : null].filter(Boolean) },
+        { k: "D", name: "Decision process", q: "What steps and who, in what order?", s: procF.length ? "amber" : isRenewal ? "amber" : "red", note: procF[0]?.text || (isRenewal ? "New order needed before term ends; no auto-renew." : "Unknown."), fix: "Write the steps down with the customer (mutual action plan).", cites: procF.length ? procF.slice(0, 2).map((f) => f.id) : isRenewal ? [`${a.id}/contract.txt`] : [] },
+        { k: "P", name: "Paper process", q: "How does the paperwork get signed?", s: isRenewal ? "amber" : "red", note: isRenewal ? `Last order ${signedBy ? `signed by ${signedBy.trim()}` : "on file"}; this time is unconfirmed.` : "Unknown.", fix: "Ask finance or procurement for the order route and lead time.", cites: isRenewal ? [`${a.id}/contract.txt`] : [] },
         { k: "I", name: "Identified pain", q: "What problem hurts enough to act on?", s: told || verified ? "green" : "red", note: ev.find((e) => e.kind === "fact")?.label?.slice(0, 120) || "Not heard yet.", fix: "Ask: what happens if this doesn't get solved?", cites: (d.evidence || []).filter((id) => E[id]?.kind === "fact").slice(0, 2) },
-        { k: "C", name: "Champion", q: "Who sells this for us when we're not in the room?", s: champ ? (leaving && /Rhys/.test(champ.who) ? "amber" : "green") : "red", note: champ ? `${champ.who} (${champ.stance})` : "Nobody yet.", fix: champ ? "Give them the evidence to carry." : "Find someone who gains from it.", cites: champ?.cites?.slice(0, 1) || [] },
-        { k: "C", name: "Competition", q: "What else could they do instead?", s: "amber", note: a.id === "A" ? "Status quo: helicopter hours and officer time." : "Status quo: contract night guards.", fix: "Price us against the status quo, per flight / per night.", cites: a.id === "A" ? ["km_value_2"] : [`${a.id}/calls/2025-08-19_enquiry_call.txt`] },
+        { k: "C", name: "Champion", q: "Who sells this for us when we're not in the room?", s: champ ? (leaving(champ.who) ? "amber" : "green") : "red", note: champ ? `${champ.who} (${champ.stance})${leaving(champ.who) ? " — leaving" : ""}` : "Nobody yet.", fix: champ ? "Give them the evidence to carry." : "Find someone who gains from it.", cites: champ?.cites?.slice(0, 1) || [] },
+        { k: "C", name: "Competition", q: "What else could they do instead?", s: "amber", note: sq ? `Status quo: ${sq.text.slice(0, 110)}` : "Status quo: do nothing and keep the people they have.", fix: "Price us against the status quo, per flight or per night.", cites: sq ? [sq.id] : [] },
       ].map((x) => ({ ...x, cites: x.cites.filter((c) => E[c]) }));
       const score = Math.round((100 * m.reduce((s, x) => s + (x.s === "green" ? 2 : x.s === "amber" ? 1 : 0), 0)) / (m.length * 2));
-      const value = d.contracted || null;
+      const value = d.contracted || d.worth_up_to || null;
       const advanced = ["qualify", "prove", "propose", "commit"].includes(stage);
       const forecast = d.unknown ? "Omitted" : d.backed && advanced && score >= 50 ? "Commit" : d.backed || value ? "Best case" : "Pipeline";
       const next = STAGES[STAGES.findIndex((s) => s.key === stage) + 1];
@@ -116,7 +126,7 @@ export function enrich(r, store) {
         value, valueText: value ? money(value) : d.debrief?.debrief_value_usd ? "Not sized yet" : "Not sized yet",
         backed: d.backed || 0, atRisk: d.at_risk || 0, meddpicc: m, score, forecast,
         winLabel: score >= 65 ? "Strong" : score >= 40 ? "Fair" : "Weak",
-        blocker: db?.blocker || d.blocker?.text || null, decider: db?.decides || null, unknown: !!d.unknown,
+        blocker: db?.blocker || d.blocker?.text || null, decider: db?.decides || roles.find((x) => /decides/i.test(x.role) && x.name)?.name || payerName, deciderCites: db ? [db.id] : roles.filter((x) => /decides|pays/i.test(x.role)).flatMap((x) => x.cites).slice(0, 2), synthetic: !!d.synthetic, unknown: !!d.unknown,
         closeBy: /renew/i.test(d.title) ? a.term_ends : null, cites: d.cites,
       });
     }
@@ -146,16 +156,18 @@ export function enrich(r, store) {
     const met = a.people.filter((p) => p.met);
     const warm = met.filter((p) => ["warm", "ally"].includes(p.relationship)).length;
     const leaving = (r.evidence.champion_leaves?.account === a.id);
-    const relationships = Math.max(0, Math.min(100, warm * 45 + (met.length - warm) * 12 - (leaving ? 25 : 0)));
-    const deciders = [...new Set(a.book.deals.map((d) => d.debrief?.decides).filter(Boolean))];
+    const payerGuarded = pipeline.some((p) => p.kind === "deal" && p.decider && person(p.decider)?.relationship === "guarded");
+    const coldReds = a.risks.filter((x) => x.type === "Going cold" && x.level === "red").length;
+    const relationships = Math.max(0, Math.min(100, warm * 35 + (met.length - warm) * 10) - (leaving ? 25 : 0) - (payerGuarded ? 30 : 0) - coldReds * 15);
+    const deciders = [...new Set(pipeline.filter((p) => p.kind === "deal").map((p) => p.decider).filter(Boolean))];
     const access = deciders.length ? Math.round((100 * deciders.filter((n) => person(n)?.met).length) / deciders.length) : 50;
-    const openNoOwner = a.risks.filter((x) => x.type === "Unanswered" || x.type === "Deadline").length;
-    const support = Math.max(0, 100 - openNoOwner * 22);
+    const openNoOwner = a.risks.filter((x) => x.type === "Unanswered").length;
+    const support = Math.max(0, 100 - a.risks.filter((x) => x.type === "Unanswered").reduce((t, x) => t + 22 + (/for (\d{3,}) days/.test(x.title) ? 20 : 0), 0));
     const reds = a.risks.filter((x) => x.level === "red").length;
     const momentum = Math.max(0, 100 - reds * 15);
     const parts = [
-      { name: "Product use", score: adoption, why: a.forceLog ? `${ops} of ${a.usage.totalDocks} docks are at forces that fly live missions` : `${ops} of ${a.usage.totalDocks} docks fly regularly`, cites: [a.forceLog?.file || `calc:${a.id}:tiers`] },
-      { name: "Relationships", score: relationships, why: `${warm} warm, ${met.length - warm} neutral or guarded${leaving ? "; main contact is leaving" : ""}`, cites: met.map((p) => p.id).slice(0, 3).concat(leaving ? ["champion_leaves"] : []) },
+      { name: "Product use", score: adoption, why: a.forceLog ? `${ops} of ${a.usage.totalDocks} docks are at ${a.forceLog.unitWord || "forces"} that fly live missions` : `${ops} of ${a.usage.totalDocks} docks fly regularly`, cites: [a.forceLog?.file || `calc:${a.id}:tiers`] },
+      { name: "Relationships", score: relationships, why: `${warm} warm, ${met.length - warm} neutral or guarded${leaving ? "; main contact is leaving" : ""}${payerGuarded ? "; the person who pays is guarded" : ""}${coldReds ? `; ${coldReds} contact(s) gone cold` : ""}`, cites: met.map((p) => p.id).slice(0, 3).concat(leaving ? ["champion_leaves"] : []) },
       { name: "Access to decision makers", score: access, why: `${deciders.filter((n) => person(n)?.met).length} of ${deciders.length} people who decide or pay have been met`, cites: a.book.deals.map((d) => d.debrief?.id).filter(Boolean).slice(0, 3) },
       { name: "Support", score: support, why: `${openNoOwner} customer request(s) waiting without a reply`, cites: [`${a.id}/requests.csv`] },
       { name: "Momentum", score: momentum, why: `${reds} urgent risk(s) open`, cites: a.risks.filter((x) => x.level === "red").map((x) => x.id).slice(0, 3) },
@@ -218,17 +230,48 @@ export function enrich(r, store) {
     // ---------- plain-English summary + the five answers ----------
     const top = a.moves[0];
     const red = a.risks.filter((x) => x.level === "red").sort((x, y) => ["Deadline", "Champion leaving", "Renewal", "Product", "Unanswered", "Going cold"].indexOf(x.type) - ["Deadline", "Champion leaving", "Renewal", "Product", "Unanswered", "Going cold"].indexOf(y.type));
-    const rd = pipeline.find((p) => /renew/i.test(p.title));
+    const rd = pipeline.find((p) => p.kind === "deal" && (/renew/i.test(p.title) || p.synthetic) && p.decider) || pipeline.find((p) => p.kind === "deal" && p.decider);
+    const procFact = a.facts.find((f) => /\b(signs?|vote|approv|budget|call-off|finance)\b/i.test(f.text));
+    const finMail = Object.keys(E).find((k) => k.startsWith(`${a.id}/emails/`) && /finance/i.test(k));
     const champ = a.people.filter((p) => p.met).sort((x, y) => ["ally", "warm", "neutral", "guarded"].indexOf(x.relationship) - ["ally", "warm", "neutral", "guarded"].indexOf(y.relationship))[0];
     a.summary = `${a.name} pays ${k(a.annual)} a year and the contract ends in ${a.days_to_renewal} days with no auto-renew. Real usage backs ${k(renewal?.backed)} of it; ${k(renewal?.at_risk)} sits on docks nobody flies. ${red[0] ? `Biggest worry: ${red[0].title.replace(/ — unanswered$/, " (no reply yet)").replace(/^(FB-\d+|REQ-[\w-]+) — /, "").replace(/^([^:]+): /, "$1 — ")}.` : ""}`;
     a.answers = [
       { q: "What is the book worth?", short: `${k(a.forecast.commit)} we can back · ${k(renewal?.at_risk)} at risk`, more: `${a.forecast.commitWhy}. ${a.book.claimsApart.filter((c) => c.implied).length ? `Big claims (${k(a.forecast.unverified)}) are not counted until someone proves them.` : ""}`, tab: "deals", color: "blue", cites: a.forecast.cites },
-      { q: "Who holds the power?", short: rd?.decider ? `${rd.decider} decides the renewal${person(rd.decider)?.met === false ? " — never met" : ""}` : "Decider unknown", more: `${champ ? `Warmest contact: ${champ.name} (${champ.relationship}). ` : ""}${a.id === "A" ? "Money is per force — each finance officer signs its own call-off." : "Group Finance wants cost per plant before anything is signed."}`, tab: "people", color: "violet", cites: [rd?.cites?.find((c) => c.startsWith("dbf_")), a.id === "A" ? "rc_funding_2" : `${a.id}/emails/2026-10-08_finance_mailbox.txt`].filter((c) => c && E[c]) },
+      { q: "Who holds the power?", short: rd?.decider ? `${rd.decider} decides${/renew|contract/i.test(rd.title) ? " the renewal" : ` “${rd.title.split(" (")[0]}”`}${person(rd.decider)?.met === false ? " — never met" : person(rd.decider) ? ` (${person(rd.decider).relationship})` : ""}` : "Decider unknown", more: `${champ ? `Warmest contact: ${champ.name} (${champ.relationship}). ` : ""}${procFact ? procFact.text : finMail ? "Finance has asked for cost per site before anything is signed." : ""}`, tab: "people", color: "violet", cites: [...(rd?.deciderCites || []), procFact?.id, finMail].filter((c) => c && E[c]).slice(0, 3) },
       { q: "What do we do first?", short: top ? top.short : "Nothing urgent", more: a.moves.slice(0, 3).map((m, i) => `${i + 1}. ${m.short} — ${m.owner.name}, by ${shortDate(m.due)}`).join("\n"), tab: "plan", color: "orange", cites: top?.cites?.slice(0, 2) || [] },
-      { q: "What is about to go wrong?", short: `${red.length} urgent · first one turns bad ${shortDate(red.filter((x) => x.turns_bad).sort((x, y) => x.turns_bad.localeCompare(y.turns_bad))[0]?.turns_bad)}`, more: red.slice(0, 3).map((x) => `• ${x.title}`).join("\n"), tab: "risks", color: "red", cites: red.slice(0, 2).flatMap((x) => x.cites.slice(0, 1)) },
+      { q: "What is about to go wrong?", short: (() => { const up = red.filter((x) => x.turns_bad && x.turns_bad >= r.asOf).sort((x, y) => x.turns_bad.localeCompare(y.turns_bad))[0]; const over = red.filter((x) => x.turns_bad && x.turns_bad < r.asOf).length; return `${red.length} urgent${over ? ` · ${over} already overdue` : ""}${up ? ` · next turns bad ${shortDate(up.turns_bad)}` : ""}`; })(), more: red.slice(0, 3).map((x) => `• ${x.title}`).join("\n"), tab: "risks", color: "red", cites: red.slice(0, 2).flatMap((x) => x.cites.slice(0, 1)) },
       { q: "What do we still not know?", short: `${a.gaps.length} open questions`, more: a.gaps.slice(0, 3).map((g) => `• ${g.what.split(/\. /)[0].replace(/\.$/, "")} → ask ${g.who.split(/[—(;]/)[0].trim()}`).join("\n"), tab: "unknowns", color: "amber", cites: a.gaps.slice(0, 2).flatMap((g) => g.cites.slice(0, 1)) },
     ];
     for (const g of a.gaps) g.whoShort = g.who.split(/[—(;]/)[0].trim();
+  }
+  // short names + portfolio roll-up (sums only within a currency)
+  for (const a of r.accounts) a.short = a.name.replace(/\b(Police|Alliance|Industrial|Group|Authority|Estates|Ltd|Limited)\b/g, "").replace(/\s+/g, " ").trim();
+  const byCur = {};
+  for (const a of r.accounts) {
+    const c = (byCur[a.currency] ||= { currency: a.currency, symbol: a.symbol, accounts: [], annual: 0, backed: 0, atRisk: 0 });
+    c.accounts.push(a.short); c.annual += a.annual || 0; c.backed += a.forecast.commit || 0; c.atRisk += a.book.at_risk || 0;
+  }
+  const allMoves = r.accounts.flatMap((a) => a.moves.map((m) => ({ id: m.id, due: m.due, acc: a.id })));
+  r.portfolio = {
+    currencies: Object.values(byCur),
+    renewals120: r.accounts.filter((a) => a.days_to_renewal != null && a.days_to_renewal <= 120).map((a) => ({ id: a.id, short: a.short, days: a.days_to_renewal })),
+    red: r.accounts.reduce((t, a) => t + a.risks.filter((x) => x.level === "red").length, 0),
+    dueThisWeek: allMoves.filter((m) => days(r.asOf, m.due) <= 7).length,
+    deadlines: r.accounts.flatMap((a) => (a.deadlines || []).filter((d) => d.date && d.date >= r.asOf).map((d) => ({ ...d, acc: a.id, short: a.short }))).sort((x, y) => x.date.localeCompare(y.date)),
+  };
+  // Monday brief: plain text a CSM can paste to their manager
+  for (const a of r.accounts) {
+    const red = a.risks.filter((x) => x.level === "red");
+    a.brief = [
+      `${a.name} — Monday brief (${fmtDate(r.asOf)})`,
+      `Health ${a.healthScore.score}/100 (${a.healthScore.label}). ${a.summary}`,
+      ``, `Worth: ${a.answers[0].short}.`,
+      `Power: ${a.answers[1].short}. ${a.answers[1].more}`,
+      ``, `First moves:`, ...a.moves.slice(0, 3).map((m) => `${m.rank}. ${m.short} — ${m.owner.name}, by ${fmtDate(m.due)}`),
+      ``, `About to go wrong:`, ...red.slice(0, 4).map((x) => `- ${x.title}${x.turns_bad ? ` (turns bad ${fmtDate(x.turns_bad)})` : ""}`),
+      ``, `Still unknown:`, ...a.gaps.slice(0, 3).map((g) => `- ${g.what.split(/\. /)[0].replace(/\.$/, "")} → ask ${g.whoShort}`),
+      ``, `Sources: every figure links to its record in Flightdeck.`,
+    ].join("\n");
   }
   r.stages = STAGES;
   r.roles = ROLE_LIST;
@@ -335,5 +378,82 @@ function play(m, a, r, money) {
     "Get the field team to swap the batteries on docks D16 and D29.",
     "Fold this into the 5 December event reply (action #1).",
   ], { to: "Insp. Karen Mbeki", subject: "RE: Batteries on two docks", body: `Karen,\n\nI'm sorry this went unanswered. Our field team will check and replace the batteries on the two docks this week — I'll confirm the date today.\n\n[Your name]` }, []);
+  const tp = topicPlay(m, a, money, P);
+  if (tp) return tp;
   return P("Follow-up", [m.why], null, []);
+}
+
+// Topic playbooks: reusable for any account, filled in with that account's own people and numbers.
+function topicPlay(m, a, money, P) {
+  const met = a.people.filter((p) => p.met);
+  const champ = met.find((p) => ["ally", "warm"].includes(p.relationship)) || met[0];
+  const first = (n) => (n || "").split(" ")[0];
+  const by = (re) => met.find((p) => re.test(p.role));
+  const dl = (re) => (a.deadlines || []).find((d) => re.test(d.text));
+  switch (m.topic) {
+    case "stopped_docks": return P("Early warning · Save the renewal", [
+      `Call ${champ?.name} today. Say you noticed ${a.usage.tiers.stopped.join(", ")} stopped flying two weeks ago and ask what changed. Don't assume it's a fault.`,
+      "Ask the Solutions Engineer to check each dock's logs for errors, a schedule change or a battery or weather hold, before the call if possible.",
+      "If the cause is on our side, fix it and confirm in writing. If it's theirs (staffing, schedule, site change), agree a restart date.",
+      "Log it as a ticket so it has a number and an owner, and check again in 7 days.",
+    ], { to: champ?.name, subject: "Three docks have gone quiet — can we help?", body: `${first(champ?.name)},\n\nA quick one: ${a.usage.tiers.stopped.join(", ")} flew most nights until two weeks ago and have flown nothing since, though they're still online. Has something changed on site — a schedule, a team, a plant? If anything on our side is getting in the way, we'll fix it this week.\n\nCould we speak for 10 minutes today or tomorrow?\n\n[Your name]` }, ["What changed two weeks ago on those sites?", "Who sets the patrol schedule there now?"]);
+    case "golive": {
+      const plan = dl(/go-live|plan/i), vote = dl(/board|vote/i);
+      const off = a.book.offers.find((o) => /pilot|certif|train/i.test(o.title) && o.status === "open");
+      const ins = by(/insurance/i);
+      return P("Rescue a stalled go-live · Mutual action plan", [
+        `Call ${champ?.name} and agree the plan in one conversation: who flies it, when it's commissioned, when the insurer is told.`,
+        off ? `Book the ${off.title.toLowerCase()} (${money(off.value)} — open offer). Without a certified pilot it cannot fly.` : "Arrange certified operators. Without them it cannot fly.",
+        "Book an engineer visit to run the commissioning flight. The installer never did one.",
+        ins ? `Ask ${ins.name} to notify the insurer before the first flight. The policy requires it, and the dock isn't declared.` : "Notify the insurer before the first flight.",
+        `Send ${first(champ?.name)} the dated plan in writing${plan ? ` by ${shortDate(plan.date)}` : ""}${vote ? `, so it's in hand before the board vote on ${shortDate(vote.date)}` : ""}.`,
+      ], { to: champ?.name, subject: "Your dock: a dated plan to get it flying", body: `${first(champ?.name)},\n\nI'm sorry you've waited since the install. Here is how we get the north-entrance dock flying night patrols:\n\n1. Pilots: two of your staff certified on [dates]${off ? ` (course: ${money(off.value)})` : ""}.\n2. Commissioning: our engineer on site [date] to run the first flight.\n3. Insurance: we'll help you notify your insurer before that flight, as the policy requires.\n4. First night patrol of the north entrance: [date].\n\nI'll join the residents' board${vote ? ` on ${shortDate(vote.date)}` : ""} if that helps.\n\n[Your name]` }, ["Which nights and which entrance matter most?", "Who on site could be trained to fly it?"]);
+    }
+    case "board_brief": {
+      const chair = by(/chair|board/i), vote = dl(/board|vote/i);
+      return P("Executive alignment · Before a vote", [
+        `Send ${chair?.name || "the board chair"} a one-page brief before ${vote ? shortDate(vote.date) : "the meeting"}: what was bought, why it hasn't flown yet, the dated plan, and what (if anything) needs a vote.`,
+        "Lead with what residents asked for: night patrol of the two entrances. The original pitch (mapping the estate) isn't what they need.",
+        "Separate what's already paid from any new spend, such as pilot training, so the vote is about one clear thing.",
+        `Offer to attend, or have ${first(champ?.name)} present it with you.`,
+      ], { to: chair?.name, subject: "Before the board meets — where the drone dock stands", body: `${first(chair?.name)},\n\nAhead of the residents' board${vote ? ` on ${shortDate(vote.date)}` : ""}, a short brief: the dock at the north entrance was installed but never commissioned, and no one on site is certified to fly it. We've agreed a dated plan with ${first(champ?.name)} to fix that, and to focus on what residents need — night patrol of the entrances.\n\nThe only new spend is optional pilot training. I'm happy to join the meeting for 10 minutes.\n\n[Your name]` }, ["What will residents want to hear at the meeting?", "What would make this an easy yes?"]);
+    }
+    case "privacy_docs": {
+      const dpo = by(/data protection|privacy/i);
+      return P("Remove a blocker · Compliance", [
+        `Send ${dpo?.name || "the data protection lead"} written answers to her four questions: what's collected, where video is stored (and in which country), how long it's kept and how it's deleted, and who can access it.`,
+        "Attach the standard data processing terms (Schedule 3) and offer a 30-minute call with an engineer.",
+        "Apologise plainly for the months of silence, and close the open ticket with what was sent.",
+        "Don't promise a go-live date. Let the assessment run its course.",
+      ], { to: dpo?.name, subject: "Your questions on the container yard dock — answers", body: `${first(dpo?.name)},\n\nI'm sorry your request from the spring went unanswered. Here are the answers you need for the assessment:\n\n1. Data collected: [video, stills, telemetry, location].\n2. Where video is stored: [service, country].\n3. Retention and deletion: [periods and method].\n4. Who can access it, and controls: [roles and controls].\n\nOur standard data processing terms are attached. An engineer can walk you through it whenever suits.\n\n[Your name]` }, ["Who else signs the assessment after you?"]);
+    }
+    case "finance_value": {
+      const payer = by(/finance|controller/i);
+      return P("Renewal · Finance-led business case", [
+        `Build a one-page value case for ${payer?.name || "finance"} from the flight records: flights per dock per site and price per dock, not the headline saving.`,
+        "Show where it earns its keep and where it doesn't yet (sites that don't fly), with a dated plan for those.",
+        `Ask ${first(champ?.name)} to introduce you, so it doesn't land as going around him.`,
+        "Ask what finance needs to see in the accounts to renew, and write that down as the success measure.",
+      ], { to: payer?.name, subject: "What the docks actually do — by site", body: `${first(payer?.name)},\n\nAhead of the renewal I'd like to give you a straight view of what the docks do, from the flight records rather than estimates: flights per site per month, and the cost per dock.\n\nCould we take 30 minutes, and could you tell me what you'd need to see in the accounts to be comfortable renewing?\n\n[Your name]` }, ["What would you need to see in the accounts to renew?", "Which patrol costs would you expect to change?"]);
+    }
+    case "knowledge_capture": {
+      const c = by(/contractor/i), off = a.book.offers.find((o) => /playbook|rollout|rota/i.test(o.title) && o.status === "open");
+      return P("Hand-over risk · Capture before it walks out", [
+        `Book two sessions with ${c?.name || "the contractor"} before he leaves: launch steps, patrol routes, alert rota, and who to call for each fault.`,
+        "Have the Solutions Engineer write it up as a runbook and get the operations team to sign it off.",
+        off ? `Position the ${off.title.toLowerCase()} (${money(off.value)}) as the way to do this properly.` : "Store it where the operations team can find it.",
+        "Name an internal owner at the customer for each part of the runbook.",
+      ], { to: champ?.name, subject: "Before the contractor leaves — let's write it down", body: `${first(champ?.name)},\n\nThe launch steps, patrol routes and alert rota currently live in ${first(c?.name)}'s head, and his contract ends soon. I'd like our engineer to sit with him twice before then and turn it into a written runbook your team owns.\n\nCan we book those sessions this week?\n\n[Your name]` }, ["Who will own each patrol once he's gone?"]);
+    }
+    case "network_register": {
+      const it = by(/IT|infrastructure/i);
+      return P("Technical readiness · Network change", [
+        `Send ${it?.name || "IT"} the exception request details for each dock: device type, location, ports and destinations, data volumes, and an owner.`,
+        "Ask for them to be registered before the cut-over, so no dock loses network access.",
+        "Diary a check the week before the change.",
+      ], { to: it?.name, subject: "Registering the drone docks before the network change", body: `${first(it?.name)},\n\nSo the docks keep working after the move to the segmented network, here are the details your notice asks for, per dock: [type, location, ports/destinations, data volumes, owner].\n\nCould you confirm they're registered before the change?\n\n[Your name]` }, []);
+    }
+    case "offer_discovery": return P("Discovery · Questions before pitching", ["Ask what problem it would solve and what happens today without it.", "Only propose once the need is clear and the person who pays has heard it."], null, ["What happens today when this goes wrong?", "Who else would need to agree?"]);
+    default: return null;
+  }
 }
