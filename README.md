@@ -1,5 +1,9 @@
 # Deal Desk: a live CRM for drone SaaS renewals and expansion
 
+**Live:** https://drone-deal-desk-crm.onrender.com · **MCP endpoint:** `POST https://drone-deal-desk-crm.onrender.com/mcp`
+
+> Hosted on Render's free plan: the first visit after 15 idle minutes takes ~30 s while it wakes and re-syncs.
+
 A live CRM for two B2B accounts (Eastern Counties Police Alliance and Aldermoor Industrial Group). It reads everything through the **Account Quest MCP** and answers five questions for each account. Every number on it traces back to the id it came from:
 
 1. **What is the book worth?** Each deal is valued only as far as usage backs it. Claims are shown apart.
