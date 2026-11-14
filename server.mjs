@@ -22,6 +22,8 @@ const { ask, assistantMode } = await import("./src/assistant.mjs");
 
 const morning = JSON.parse(fs.readFileSync("seed/morning.json", "utf8"));
 const PORT = Number(process.env.PORT || 8787);
+// Build stamp: open tabs compare it and reload after a deploy, so old page code never meets new data.
+const BUILD = process.env.RENDER_GIT_COMMIT?.slice(0, 7) || String(fs.statSync("public/index.html").mtimeMs | 0);
 const WRITE_KEY = process.env.WRITE_KEY || "";
 
 let cache = null;
@@ -63,7 +65,7 @@ onCollab((ev) => {
 });
 
 function slimState() {
-  const s = { ...state(), assistant: assistantMode() };
+  const s = { ...state(), assistant: assistantMode(), build: BUILD };
   const evidence = {};
   for (const [k, v] of Object.entries(s.evidence)) evidence[k] = v.text && v.text.length > 1200 ? { ...v, text: v.text.slice(0, 1200), truncated: v.text.length } : v;
   return { ...s, evidence };
@@ -78,7 +80,7 @@ const readBody = (req) => new Promise((ok, bad) => { let b = ""; req.on("data", 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   try {
-    if (url.pathname === "/" || url.pathname === "/index.html") return send(res, 200, fs.readFileSync("public/index.html", "utf8"), "text/html; charset=utf-8");
+    if (url.pathname === "/" || url.pathname === "/index.html") return send(res, 200, fs.readFileSync("public/index.html", "utf8").replace("__BUILD__", BUILD), "text/html; charset=utf-8");
     if (url.pathname === "/api/state") return send(res, 200, slimState());
     if (url.pathname === "/api/evidence") {
       const e = state().evidence[url.searchParams.get("id")];

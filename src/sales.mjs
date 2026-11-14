@@ -453,6 +453,16 @@ function topicPlay(m, a, money, P) {
         "Diary a check the week before the change.",
       ], { to: it?.name, subject: "Registering the drone docks before the network change", body: `${first(it?.name)},\n\nSo the docks keep working after the move to the segmented network, here are the details your notice asks for, per dock: [type, location, ports/destinations, data volumes, owner].\n\nCould you confirm they're registered before the change?\n\n[Your name]` }, []);
     }
+    case "expansion_reply": {
+      const asker = met.find((p) => m.title.includes(p.name));
+      const payer = by(/finance|controller/i);
+      return P("Expansion · Earn the right to grow", [
+        `Reply to ${asker?.name || "them"} within two days, and apologise for the wait.`,
+        `Be straight: a price for more sites is easy, but ${payer ? `${payer.name} (finance)` : "finance"} has to see value in the current sites first, so the renewal case comes first.`,
+        "Offer an outline per site, sized from what the current docks actually do. Leave sites that don't fly yet out of the comparison.",
+        "Propose a joint plan: renewal value case → fix sites that don't fly → expansion proposal, each with a date.",
+      ], { to: asker?.name, subject: "Re: more sites — how we'd get there", body: `${first(asker?.name)},\n\nSorry for the slow reply. We'd be glad to price more sites. To make it land with ${payer ? first(payer.name) : "finance"}, I suggest we first show what the current docks deliver, site by site, from the flight records, then bring an expansion outline sized on that.\n\nCould we agree dates for both this week?\n\n[Your name]` }, ["Who besides you needs to say yes to more sites?", "What would finance need to see first?"]);
+    }
     case "offer_discovery": return P("Discovery · Questions before pitching", ["Ask what problem it would solve and what happens today without it.", "Only propose once the need is clear and the person who pays has heard it."], null, ["What happens today when this goes wrong?", "Who else would need to agree?"]);
     default: return null;
   }

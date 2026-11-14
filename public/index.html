@@ -205,7 +205,8 @@ td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-
 <div class="toast" id="toast"></div>
 <script>
 // ---------- state ----------
-let S = null, C = { messages: [], tasks: {}, points: {} };
+const BOOT_BUILD = "__BUILD__";
+let S = null, C = { messages: [], tasks: {}, points: {}, tickets: {} };
 const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
 let me = JSON.parse(ls.get("fd_me") || "null");
 let route = ls.get("fd_route") || "today";
@@ -240,7 +241,8 @@ function linkCites(text) { // [id] in coach answers -> source chips
 
 // ---------- data ----------
 async function load() {
-  const [s, c] = await Promise.all([fetch("/api/state").then((r) => r.json()), fetch("/api/collab").then((r) => r.json())]);
+  const [s, c] = await Promise.all([fetch("/api/state", { cache: "no-store" }).then((r) => r.json()), fetch("/api/collab", { cache: "no-store" }).then((r) => r.json())]);
+  if (s.build && BOOT_BUILD !== "__BUILD__" && s.build !== BOOT_BUILD) { location.reload(); return; } // new deploy: load the new page code
   S = s; C = c; render();
 }
 async function loadCollab() { C = await fetch("/api/collab").then((r) => r.json()); if (route === "chat") renderChatStream(); else render(); }
@@ -326,7 +328,7 @@ function renderToday() {
   $("#main").innerHTML = topbar(`Good ${hr < 12 ? "morning" : hr < 18 ? "afternoon" : "evening"}, ${esc(me?.name || "team")} 👋`, `Here is what needs you, as of ${DY(S.asOf)}.`) + `
   ${fresh.length ? `<div class="card" style="border-left:4px solid var(--orange);margin-bottom:16px"><b>🆕 New accounts picked up automatically:</b> ${fresh.map((a) => `<a href="#" onclick="go('acct:${a.id}','overview');return false">${esc(a.name)}</a>`).join(" · ")} <span class="small muted">— already analysed, with actions and risks below.</span></div>` : ""}
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:16px">
-    ${P.currencies.map((c) => `<div class="card"><div class="small muted">Book in ${c.currency} · ${c.accounts.length} account${c.accounts.length > 1 ? "s" : ""}</div><div class="mid">${c.symbol}${Math.round(c.backed / 1000)}k <span class="small muted" style="font-weight:500">backed</span></div><div class="small"><span style="color:var(--red)">${c.symbol}${Math.round(c.atRisk / 1000)}k at risk</span> · ${c.symbol}${Math.round(c.annual / 1000)}k/yr</div></div>`).join("")}
+    ${P.currencies.map((c) => `<div class="card"><div class="small muted">Book in ${c.currency} · ${c.accounts.length} account${c.accounts.length > 1 ? "s" : ""}</div><div class="mid">${c.symbol}${Math.round(c.backed / 1000)}k <span class="small muted" style="font-weight:500">backed</span></div><div class="small"><span style="color:var(--red)">${c.symbol}${Math.round(c.atRisk / 1000)}k at risk</span> · ${c.symbol}${Math.round(c.annual / 1000)}k/yr</div>${src(S.accounts.filter((a) => a.currency === c.currency).flatMap((a) => [a.book.backedCalc, `${a.id}/contract.txt`]), "How it adds up")}</div>`).join("")}
     <div class="card"><div class="small muted">Renewals in 120 days</div><div class="mid">${P.renewals120.length}</div><div class="small">${P.renewals120.map((x) => `${esc(x.short)} ${x.days}d`).join(" · ") || "none"}</div></div>
     <div class="card"><div class="small muted">Urgent risks</div><div class="mid" style="color:var(--red)">${P.red}</div><div class="small">${P.dueThisWeek} actions due in 7 days</div></div>
   </div>
@@ -391,7 +393,7 @@ function renderAccount(a) {
     <div style="flex:1;min-width:240px"><div class="row"><b style="font-size:18px">Health: ${a.healthScore.label}</b><span class="pill c-orange">Renews in ${a.days_to_renewal} days · ${D(a.term_ends)}</span>${a.released ? '<span class="pill c-blue">New account</span>' : ""}<button class="btn sm" style="background:transparent;color:#fff;border-color:#5a7299" onclick="copyBrief('${a.id}')">📋 Copy Monday brief</button></div>
       <p style="margin:8px 0 0;max-width:760px" class="sub">${esc(a.summary)}</p>
       <div class="life">${["Onboard", "Adopt", "Expand", "Renew"].map((l) => `<span class="${a.lifecycle.stage === l ? "on" : ""}">${l}</span>`).join("")}</div></div>
-    <div style="text-align:right"><div class="sub small">Worth per year</div><div class="big">${K(a, a.annual)}</div><div class="sub small">${K(a, a.forecast.commit)} backed · ${K(a, a.book.at_risk)} at risk</div></div></div>
+    <div style="text-align:right"><div class="sub small">Worth per year</div><div class="big">${K(a, a.annual)}</div><div class="sub small">${K(a, a.forecast.commit)} backed · ${K(a, a.book.at_risk)} at risk</div>${src([`${a.id}/contract.txt`, a.book.backedCalc])}</div></div>
   <div class="tabs">${tabs.map(([k, l, n]) => `<button class="tab ${acctTab === k ? "on" : ""}" onclick="setTab('${k}')">${l}${n ? `<span class="n">${n}</span>` : ""}</button>`).join("")}</div>
   <div id="tabbody">${({ overview: tOverview, plan: tPlan, deals: tDeals, people: tPeople, risks: tRisks, unknowns: tUnknowns, tickets: tTickets, history: tHistory }[acctTab] || tOverview)(a)}</div>`;
 }
@@ -420,10 +422,10 @@ function tDeals(a) {
     <div class="card" style="margin-top:16px"><h3>🗣️ Claims we are not counting</h3><p class="small muted" style="margin-top:0">Things people said with nothing to back them yet. Shown so nobody quotes them as fact.</p>${a.book.claimsApart.map((c) => `<div class="li"><span class="pill ${c.told ? "c-amber" : "c-red"}">${c.told ? "Said" : "Unproven"}</span><div class="body"><div>“${esc(c.text)}”</div><div class="small muted">${esc(c.by)}${c.implied ? ` · would be worth ${K(a, c.implied)} if true` : ""}</div></div>${src([c.id])}</div>`).join("") || '<p class="empty">None.</p>'}</div>`;
 }
 function tPeople(a) {
-  const roleOf = (name) => [...new Set(a.power.flatMap((p) => p.roles.filter((r) => r.who === name).map((r) => `${r.role.replace(/ \(.*\)/, "")} · ${a.pipeline.find((d) => d.id === p.deal)?.title.split(" (")[0] || p.deal}`)))];
+  const roleOf = (name) => [...new Set(a.power.flatMap((p) => { const rs = p.roles.filter((r) => r.who === name); const hasChamp = rs.some((r) => /champion/i.test(r.role)); return rs.filter((r) => !(hasChamp && r.role === "Uses")).map((r) => `${r.role.replace(/ \(.*\)/, "")} · ${a.pipeline.find((d) => d.id === p.deal)?.title.split(" (")[0] || p.deal}`); }))];
   const st = { ally: "c-green", warm: "c-green", neutral: "c-grey", guarded: "c-amber", "never met": "c-red" };
   const card = (p) => `<div class="card"><div class="person">${av(p.name, 40)}<div style="flex:1;min-width:0"><div class="row"><b>${esc(p.name)}</b><span class="pill ${st[p.relationship] || "c-grey"}">${esc(p.relationship)}</span></div><div class="small muted">${esc(p.role)}</div>
-    <div class="small" style="margin-top:6px">${p.last_contact ? `Last contact ${D(p.last_contact)} · ` : ""}${p.platform ? `${p.platform.sign_ins_90d} logins in 90 days` : ""}</div>
+    <div class="small" style="margin-top:6px">${[p.last_contact ? `Last contact ${D(p.last_contact)}` : "", p.platform ? `${p.platform.sign_ins_90d} logins in 90 days` : ""].filter(Boolean).join(" · ")}</div>
     <div class="chips" style="margin-top:6px">${roleOf(p.name).map((r) => `<span class="pill c-violet">${esc(r)}</span>`).join("")}</div><div style="margin-top:6px">${src(p.cites)}</div></div></div></div>`;
   const gaps = a.power.flatMap((p) => p.roles.filter((r) => r.stance === "gap").map((r) => ({ ...r, deal: p.title })));
   return `<p class="muted" style="margin-top:0">The buying committee: who decides, pays, uses and could block each deal — and how warm they are to us.</p>
