@@ -1,0 +1,50 @@
+{
+  "source": "Play page > Toolkit > This morning (the player's own discovery debrief). Not served by the MCP; transcribed once.",
+  "book_usd": 270468,
+  "best_reply_rate": 0.42,
+  "never_met": [
+    { "id": "dbf_hannah_doyle", "account": "A", "name": "Hannah Doyle", "role": "Alliance procurement lead" },
+    { "id": "dbf_nadia_rahman", "account": "B", "name": "Nadia Rahman", "role": "Group finance controller" },
+    { "id": "dbf_owen_fitch", "account": "B", "name": "Owen Fitch", "role": "Group IT infrastructure lead" },
+    { "id": "dbf_julian_tate", "account": "B", "name": "Julian Tate", "role": "Insurance and risk manager" }
+  ],
+  "deals": [
+    { "id": "dbf_a_renewal", "deal": "a_renewal", "account": "A", "title": "Renew the alliance contract (35 docks)", "stage": "qualified", "debrief_value_usd": 104355,
+      "why_stopped": "You knew the blocker and proposed 2 times, without clearing it.",
+      "unlock": "Send Rhys Calder a proposal with exactly: flight_log_force_month (file) and km_usage_1 (from Insp. Karen Mbeki).",
+      "decides": "Rhys Calder", "pays": "Rhys Calder", "unlock_evidence": ["flight_log_force_month", "km_usage_1"] },
+    { "id": "dbf_a_tarn", "deal": "a_tarn", "account": "A", "title": "Tarn Valley and Norwold go live", "stage": "identified", "debrief_value_usd": 4193,
+      "why_stopped": "You knew of it, but did not learn enough to see what blocked it. Something you said put it at risk.",
+      "decides": "Fatima Osei", "pays": "Rhys Calder",
+      "blocker": "The DPIA cannot be signed without the data-flow documents FlytBase never sent.",
+      "at_risk_by": "\"Brilliant. I'll put a one-week go-live in the plan.\" (in 'Getting Tarn Valley live')" },
+    { "id": "dbf_a_westmere", "deal": "a_westmere", "account": "A", "title": "Scale Westmere's fleet", "stage": "identified", "debrief_value_usd": 6881,
+      "why_stopped": "You knew of it, but did not learn enough to see what blocked it. Something you said put it at risk.",
+      "decides": "Ewan Brooks", "pays": "Ewan Brooks",
+      "blocker": "No cost per flight against helicopter hours.",
+      "at_risk_by": "An offer pitched before they were ready (twice)." },
+    { "id": "dbf_a_tender", "deal": "a_tender", "account": "A", "title": "Position for the 300-dock framework tender", "stage": "identified", "debrief_value_usd": 48984,
+      "why_stopped": "You knew of it, but never met whoever decides or pays for it.",
+      "decides": "Hannah Doyle", "pays": "Ewan Brooks",
+      "blocker": "The specification has no costed operating model." },
+    { "id": "dbf_b_renewal", "deal": "b_renewal", "account": "B", "title": "Renew the Aldermoor contract (14 docks)", "stage": "identified", "debrief_value_usd": 1055,
+      "why_stopped": "You knew of it, but never met whoever decides or pays for it.",
+      "decides": "Nadia Rahman", "pays": "Nadia Rahman",
+      "blocker": "Finance cannot verify the savings the programme claims." },
+    { "id": "dbf_b_idle_plants", "deal": "b_idle_plants", "account": "B", "title": "Bring the idle plants into regular patrol", "stage": "never heard of",
+      "why_stopped": "You never heard about it. Something you said put it at risk.",
+      "came_up_with": ["Beatriz Alonso", "Owen Fitch", "Stefan Roy"],
+      "at_risk_by": "An offer pitched before they were ready." },
+    { "id": "dbf_b_insurance", "deal": "b_insurance", "account": "B", "title": "Protect and extend the insurance discount", "stage": "never heard of",
+      "why_stopped": "You never heard about it.",
+      "came_up_with": ["Julian Tate", "Nadia Rahman"] },
+    { "id": "dbf_b_case_study", "deal": "b_case_study", "account": "B", "title": "Case study for the 40-plant sister company", "stage": "never heard of",
+      "why_stopped": "You never heard about it.",
+      "came_up_with": ["Stefan Roy", "Nadia Rahman", "Julian Tate", "Beatriz Alonso"] }
+  ],
+  "doors_closed": [
+    { "id": "dbf_door_rhys", "account": "A", "who": "Rhys Calder", "topic": "What is holding Tarn Valley back", "because": "In 'How the four forces are getting on' you said \"Brilliant. Shall we plan the rollout across all four?\"" },
+    { "id": "dbf_door_ewan", "account": "A", "who": "Ewan Brooks", "topic": "When the money is decided", "because": "In 'What a helicopter hour costs' you said \"Our customers usually see big savings, to be fair.\"" },
+    { "id": "dbf_door_stefan", "account": "B", "who": "Stefan Roy", "topic": "The sister-company case study", "because": "In 'The savings figure' you said \"Strong number. Has the board been pleased with it so far?\"" }
+  ]
+}

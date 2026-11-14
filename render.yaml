@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: drone-deal-desk-crm
+    runtime: node
+    plan: free
+    buildCommand: "true"
+    startCommand: node server.mjs
+    envVars:
+      - key: AQ_TOKEN
+        sync: false
+      - key: WRITE_KEY
+        sync: false
