@@ -3,373 +3,566 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Deal Desk</title>
+<title>Flightdeck CRM</title>
+<link rel="icon" href="/brand.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f4f2ee; --panel:#fffdf9; --ink:#1b1a17; --muted:#6b675f; --line:#e2ddd3; --soft:#efebe3;
-  --red:#c2352b; --red-bg:#fbe9e6; --amber:#b86e00; --amber-bg:#fdf1dc; --green:#2f7a4a; --green-bg:#e5f3ea;
-  --accent:#1f4fd1; --accent-bg:#e8eefc; --chip:#ece7dc; --shadow:0 1px 0 rgba(0,0,0,.04),0 6px 20px -12px rgba(0,0,0,.18);
+  --bg:#F4F6FA; --panel:#FFFFFF; --ink:#0F1B2D; --muted:#5B6B82; --line:#E3E8F0; --soft:#EEF2F8;
+  --navy:#0B1B33; --navy2:#13284A; --sky:#2F80ED; --sky-bg:#E7F0FD; --orange:#FF6B2C; --orange-bg:#FFEDE4;
+  --green:#1F9D63; --green-bg:#E3F5EC; --amber:#C98303; --amber-bg:#FDF2DC; --red:#D93B30; --red-bg:#FCE7E5;
+  --violet:#6E56F0; --violet-bg:#EEEBFE; --grey:#6B7A90; --grey-bg:#EEF1F5;
+  --shadow:0 1px 2px rgba(15,27,45,.04),0 8px 24px -14px rgba(15,27,45,.18); --r:14px;
 }
 @media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
-  --bg:#141412; --panel:#1c1b19; --ink:#ece8df; --muted:#9a958a; --line:#2f2d29; --soft:#24231f;
-  --red:#ff6b5e; --red-bg:#3a1d1a; --amber:#f0a840; --amber-bg:#352915; --green:#5cc184; --green-bg:#17301f;
-  --accent:#7aa2ff; --accent-bg:#1c2540; --chip:#2a2824; --shadow:none; }}
-:root[data-theme="dark"]{
-  --bg:#141412; --panel:#1c1b19; --ink:#ece8df; --muted:#9a958a; --line:#2f2d29; --soft:#24231f;
-  --red:#ff6b5e; --red-bg:#3a1d1a; --amber:#f0a840; --amber-bg:#352915; --green:#5cc184; --green-bg:#17301f;
-  --accent:#7aa2ff; --accent-bg:#1c2540; --chip:#2a2824; --shadow:none; }
+  --bg:#0A1424; --panel:#101D33; --ink:#E8EEF7; --muted:#93A3BB; --line:#1E2F4B; --soft:#15253F;
+  --sky-bg:#132C52; --orange-bg:#3A2114; --green-bg:#0F2E22; --amber-bg:#33270C; --red-bg:#3A1714; --violet-bg:#221B4A; --grey-bg:#1A2840; --shadow:none; }}
+:root[data-theme="dark"]{ --bg:#0A1424; --panel:#101D33; --ink:#E8EEF7; --muted:#93A3BB; --line:#1E2F4B; --soft:#15253F;
+  --sky-bg:#132C52; --orange-bg:#3A2114; --green-bg:#0F2E22; --amber-bg:#33270C; --red-bg:#3A1714; --violet-bg:#221B4A; --grey-bg:#1A2840; --shadow:none; }
 *{box-sizing:border-box}
-html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 "IBM Plex Sans",system-ui,sans-serif}
-a{color:var(--accent)}
-.mono{font-family:"IBM Plex Mono",ui-monospace,monospace}
-header.top{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
-.bar{max-width:1320px;margin:0 auto;padding:10px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
-.brand{font-weight:700;letter-spacing:-.01em;font-size:17px;display:flex;align-items:center;gap:8px}
-.brand small{font-weight:400;color:var(--muted);font-size:12px}
-.sync{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
-.dot{width:8px;height:8px;border-radius:50%;background:var(--green);box-shadow:0 0 0 0 var(--green);animation:pulse 2s infinite}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 Inter,system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+a{color:var(--sky)}
+.app{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+aside.side{background:var(--navy);color:#C9D6EA;padding:18px 12px;position:sticky;top:0;height:100vh;display:flex;flex-direction:column;gap:4px}
+.logo{display:flex;align-items:center;gap:10px;padding:4px 8px 16px;color:#fff}
+.logo img{width:34px;height:34px}
+.logo b{font-size:17px;letter-spacing:-.01em}
+.logo small{display:block;font-size:11px;color:#8FA6C8;font-weight:500}
+.nav-i{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:10px;cursor:pointer;border:0;background:none;color:#C9D6EA;text-align:left;width:100%;font-size:14px}
+.nav-i:hover{background:var(--navy2);color:#fff}
+.nav-i.on{background:var(--sky);color:#fff}
+.nav-i .ic{width:20px;text-align:center}
+.nav-i .badge{margin-left:auto;background:var(--orange);color:#fff;border-radius:999px;font-size:11px;padding:0 7px;font-weight:600}
+.nav-h{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#6F86AA;padding:14px 10px 4px}
+.side .foot{margin-top:auto;font-size:12px;color:#8FA6C8;padding:8px}
+.live{display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:#3DDC97;box-shadow:0 0 0 0 rgba(61,220,151,.6);animation:pulse 2s infinite}
 .dot.err{background:var(--red);animation:none}
-@keyframes pulse{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--green) 60%,transparent)}70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
-.tabs{display:flex;gap:4px;margin-left:auto;flex-wrap:wrap}
-.tab{border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:6px 12px;border-radius:999px;cursor:pointer;font:inherit;font-size:13px}
-.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-main{max-width:1320px;margin:0 auto;padding:18px 20px 80px}
-.grid{display:grid;gap:14px}
+@keyframes pulse{70%{box-shadow:0 0 0 7px transparent}100%{box-shadow:0 0 0 0 transparent}}
+main{padding:22px 28px 80px;min-width:0;max-width:1280px;width:100%}
+.topbar{display:flex;align-items:center;gap:12px;margin-bottom:18px;flex-wrap:wrap}
+.topbar h1{margin:0;font-size:24px;letter-spacing:-.02em}
+.topbar .sub{color:var(--muted)}
+.spacer{flex:1}
+.me{display:flex;align-items:center;gap:8px;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:4px 12px 4px 4px;cursor:pointer}
+.av{width:28px;height:28px;border-radius:50%;display:inline-grid;place-items:center;font-size:12px;font-weight:700;color:#fff;flex:none}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px;box-shadow:var(--shadow);min-width:0}
+.card h3{margin:0 0 10px;font-size:15px;display:flex;align-items:center;gap:8px}
+.card h3 .sub{font-weight:400;color:var(--muted);font-size:13px}
+.grid{display:grid;gap:16px}
 .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .g3{grid-template-columns:repeat(3,minmax(0,1fr))}
-.g4{grid-template-columns:repeat(4,minmax(0,1fr))}
-@media (max-width:900px){.g2,.g3,.g4{grid-template-columns:1fr}}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;box-shadow:var(--shadow);min-width:0}
-.card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
-section.q{margin-top:26px;scroll-margin-top:110px}
-.qhead{display:flex;align-items:baseline;gap:12px;margin-bottom:10px;flex-wrap:wrap}
-.qnum{font-family:"IBM Plex Mono",monospace;font-size:12px;border:1px solid var(--ink);border-radius:4px;padding:1px 6px}
-.qhead h2{margin:0;font-size:20px;letter-spacing:-.01em}
-.qhead p{margin:0;color:var(--muted);font-size:13px}
-.kpi{font-size:28px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
-.kpi.small{font-size:20px}
-.sub{color:var(--muted);font-size:12px}
-.chip{display:inline-flex;align-items:center;gap:3px;font-family:"IBM Plex Mono",monospace;font-size:11px;background:var(--chip);color:var(--ink);border:0;border-radius:4px;padding:1px 6px;margin:2px 3px 2px 0;cursor:pointer;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle}
-.chip:hover{background:var(--accent-bg);color:var(--accent)}
-.chip.fact-claim{box-shadow:inset 2px 0 0 var(--red)}
-.chip.fact-told{box-shadow:inset 2px 0 0 var(--amber)}
-.chip.fact-verified{box-shadow:inset 2px 0 0 var(--green)}
-.pill{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;text-transform:uppercase;letter-spacing:.04em}
-.red{color:var(--red);background:var(--red-bg)} .amber{color:var(--amber);background:var(--amber-bg)} .green{color:var(--green);background:var(--green-bg)} .blue{color:var(--accent);background:var(--accent-bg)} .grey{color:var(--muted);background:var(--soft)}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;font-weight:600;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding:6px 8px;border-bottom:1px solid var(--line)}
-td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}
-td.num,th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
-.tablewrap{overflow-x:auto}
-.move{display:grid;grid-template-columns:44px 1fr auto;gap:12px;padding:14px 0;border-bottom:1px solid var(--line)}
-.move:last-child{border-bottom:0}
-.rank{font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:500;color:var(--muted)}
-.move.top .rank{color:var(--ink)}
-.move h4{margin:0 0 4px;font-size:15px}
-.move p{margin:0 0 6px;color:var(--muted);font-size:13px}
-.meta{display:flex;gap:10px;flex-wrap:wrap;font-size:12px;align-items:center}
-.meta b{font-weight:600}
-.btn{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:5px 10px;font:inherit;font-size:12px;cursor:pointer;white-space:nowrap}
-.btn:hover{border-color:var(--ink)}
-.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink)}
-.risk{display:grid;grid-template-columns:70px 1fr 120px;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
-.risk:last-child{border-bottom:0}
-.risk h4{margin:0 0 3px;font-size:14px}
-.risk p{margin:0 0 4px;color:var(--muted);font-size:13px}
-.when{font-size:12px;text-align:right}
-.when b{display:block;font-size:13px;color:var(--ink)}
-@media (max-width:700px){.risk{grid-template-columns:1fr}.when{text-align:left}.move{grid-template-columns:30px 1fr}.move .act{grid-column:2}}
-.role{display:grid;grid-template-columns:150px 1fr;gap:8px;padding:6px 0;border-top:1px dashed var(--line);font-size:13px}
-.role:first-of-type{border-top:0}
-.role .r{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em}
-.stance{font-size:11px;padding:1px 6px;border-radius:4px;margin-left:6px}
-.stance.warm,.stance.ally{color:var(--green);background:var(--green-bg)} .stance.neutral{color:var(--muted);background:var(--soft)} .stance.guarded{color:var(--amber);background:var(--amber-bg)} .stance.never{color:var(--red);background:var(--red-bg)} .stance.gap{color:var(--red);background:var(--red-bg)}
-.bars{display:flex;align-items:flex-end;gap:4px;height:90px;margin-top:8px}
-.bars div{flex:1;background:var(--accent);opacity:.85;border-radius:3px 3px 0 0;position:relative;min-height:2px}
-.bars div span{position:absolute;bottom:-18px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap}
-.bars div em{position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;font-style:normal;color:var(--ink)}
-.stack{display:flex;height:14px;border-radius:4px;overflow:hidden;background:var(--soft);margin:10px 0 6px}
-.stack div{height:100%}
-.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
-.legend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:5px;vertical-align:-1px}
-.dockgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:4px;margin-top:8px}
-.dock{font-family:"IBM Plex Mono",monospace;font-size:10px;padding:5px 4px;border-radius:4px;text-align:center;cursor:default}
-.drawer{position:fixed;top:0;right:0;bottom:0;width:min(560px,100vw);background:var(--panel);border-left:1px solid var(--line);box-shadow:-20px 0 40px -20px rgba(0,0,0,.35);transform:translateX(100%);transition:transform .2s;z-index:50;display:flex;flex-direction:column}
+.g5{grid-template-columns:repeat(5,minmax(0,1fr))}
+.g21{grid-template-columns:2fr 1fr}
+@media (max-width:1100px){.g5{grid-template-columns:repeat(2,minmax(0,1fr))}.g21{grid-template-columns:1fr}}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr}
+  aside.side{position:sticky;top:0;z-index:30;height:auto;flex-direction:row;overflow-x:auto;padding:8px;gap:4px;align-items:center}
+  .logo{padding:0 8px 0 2px}.logo small,.nav-h,.side .foot{display:none}
+  #nav{display:flex;gap:4px}
+  .nav-i{width:auto;white-space:nowrap;padding:7px 10px}
+  main{padding:16px}
+  .g2,.g3,.g5{grid-template-columns:1fr}
+}
+.pill{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.c-red{color:var(--red);background:var(--red-bg)} .c-amber{color:var(--amber);background:var(--amber-bg)} .c-green{color:var(--green);background:var(--green-bg)}
+.c-blue{color:var(--sky);background:var(--sky-bg)} .c-orange{color:var(--orange);background:var(--orange-bg)} .c-violet{color:var(--violet);background:var(--violet-bg)} .c-grey{color:var(--grey);background:var(--grey-bg)}
+.src{display:inline-flex;align-items:center;gap:4px;font-size:12px;color:var(--muted);background:var(--soft);border:0;border-radius:6px;padding:2px 8px;cursor:pointer;margin:2px 4px 2px 0}
+.src:hover{color:var(--sky);background:var(--sky-bg)}
+.btn{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:7px 12px;font-size:13px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--sky);color:var(--sky)}
+.btn.pri{background:var(--orange);border-color:var(--orange);color:#fff}
+.btn.pri:hover{filter:brightness(1.05);color:#fff}
+.btn.sm{padding:4px 9px;font-size:12px;border-radius:8px}
+.btn.on{background:var(--sky);border-color:var(--sky);color:#fff}
+.muted{color:var(--muted)}
+.small{font-size:12px}
+.big{font-size:28px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.mid{font-size:20px;font-weight:700;letter-spacing:-.01em}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);margin:18px 0 16px;overflow-x:auto}
+.tab{border:0;background:none;padding:10px 14px;cursor:pointer;color:var(--muted);font-weight:600;border-bottom:2px solid transparent;white-space:nowrap}
+.tab.on{color:var(--ink);border-bottom-color:var(--orange)}
+.tab .n{font-size:11px;background:var(--soft);border-radius:999px;padding:0 6px;margin-left:4px}
+/* answers */
+.ans{border-top:4px solid var(--c);cursor:pointer;transition:transform .12s}
+.ans:hover{transform:translateY(-2px)}
+.ans .q{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--c)}
+.ans .a{font-size:16px;font-weight:600;margin:6px 0;line-height:1.35}
+.ans .m{font-size:13px;color:var(--muted);white-space:pre-line}
+/* health */
+.ring{--p:50;--col:var(--sky);width:76px;height:76px;border-radius:50%;background:conic-gradient(var(--col) calc(var(--p)*1%),var(--soft) 0);display:grid;place-items:center;flex:none}
+.ring b{width:60px;height:60px;border-radius:50%;background:var(--panel);display:grid;place-items:center;font-size:20px}
+.ring.sm{width:52px;height:52px}.ring.sm b{width:40px;height:40px;font-size:14px}
+.bar{height:8px;border-radius:99px;background:var(--soft);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px}
+.life{display:flex;gap:4px;margin-top:6px}
+.life span{flex:1;text-align:center;font-size:11px;padding:4px 0;border-radius:6px;background:var(--soft);color:var(--muted);font-weight:600}
+.life span.on{background:var(--orange);color:#fff}
+/* actions */
+.act{border:1px solid var(--line);border-left:4px solid var(--c,var(--sky));border-radius:12px;padding:14px 16px;background:var(--panel);margin-bottom:12px}
+.act.done{opacity:.6}
+.act.done .t{text-decoration:line-through}
+.act .t{font-weight:650;font-size:15px;margin:0}
+.act .why{color:var(--muted);font-size:13px;margin:6px 0}
+.rank{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:var(--navy);color:#fff;font-weight:700;flex:none}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden}
+.seg button{border:0;background:var(--panel);padding:4px 10px;font-size:12px;cursor:pointer;color:var(--muted)}
+.seg button.on{background:var(--sky);color:#fff}
+.seg button.on.done{background:var(--green)}
+.how{background:var(--soft);border-radius:10px;padding:12px 14px;margin-top:10px}
+.how ol{margin:6px 0;padding-left:20px}
+.how li{margin:3px 0}
+.draft{white-space:pre-wrap;font-size:13px;background:var(--panel);border:1px dashed var(--line);border-radius:8px;padding:10px;margin-top:6px}
+details>summary{cursor:pointer;list-style:none;font-weight:600;color:var(--sky);font-size:13px}
+details>summary::-webkit-details-marker{display:none}
+/* kanban */
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(220px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
+.col{background:var(--soft);border-radius:12px;padding:10px;min-height:120px}
+.col h4{margin:0 0 8px;font-size:13px;display:flex;justify-content:space-between;align-items:center}
+.col h4 small{color:var(--muted);font-weight:500}
+.dc{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer;border-top:3px solid var(--c)}
+.dc:hover{border-color:var(--sky)}
+.dc .tt{font-weight:600;font-size:13px;line-height:1.3}
+.medd{display:flex;gap:3px;margin-top:6px}
+.medd span{width:18px;height:18px;border-radius:4px;font-size:10px;font-weight:700;display:grid;place-items:center;color:#fff}
+.medd .green{background:var(--green)}.medd .amber{background:var(--amber)}.medd .red{background:var(--red)}
+/* lists */
+.li{display:flex;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);align-items:flex-start}
+.li:last-child{border-bottom:0}
+.li .body{flex:1;min-width:0}
+.li .tt{font-weight:600}
+.tl-ic{width:32px;height:32px;border-radius:10px;display:grid;place-items:center;flex:none;font-size:15px}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:12px;color:var(--muted);font-weight:600;padding:8px;border-bottom:1px solid var(--line)}
+td{padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top;font-size:13px}
+.tw{overflow-x:auto}
+.person{display:flex;gap:12px;align-items:flex-start}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chips .pill{white-space:normal;line-height:1.3}
+.filter{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:4px 12px;font-size:12px;cursor:pointer}
+.filter.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+/* chat */
+.chat{display:grid;grid-template-columns:220px 1fr;height:calc(100vh - 120px);min-height:480px}
+@media (max-width:820px){.chat{grid-template-columns:1fr;height:auto}}
+.chans{border-right:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:2px}
+.chan{border:0;background:none;text-align:left;padding:8px 10px;border-radius:8px;cursor:pointer;color:var(--muted);font-weight:500}
+.chan.on{background:var(--sky-bg);color:var(--sky)}
+.msgs{display:flex;flex-direction:column;min-height:0}
+.stream{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px;min-height:300px}
+.msg{display:flex;gap:10px;max-width:780px}
+.msg .bub{background:var(--soft);border-radius:4px 14px 14px 14px;padding:9px 13px;white-space:pre-wrap;word-wrap:break-word;min-width:0}
+.msg.ai .bub{background:var(--sky-bg)}
+.msg.mine{align-self:flex-end;flex-direction:row-reverse}
+.msg.mine .bub{background:var(--navy);color:#fff;border-radius:14px 4px 14px 14px}
+.msg .who{font-size:12px;color:var(--muted);margin-bottom:2px}
+.compose{border-top:1px solid var(--line);padding:12px;display:flex;gap:8px}
+.compose textarea{flex:1;resize:none;border:1px solid var(--line);border-radius:10px;padding:10px;font:inherit;background:var(--panel);color:var(--ink);min-height:44px;max-height:140px}
+.suggest{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 8px}
+/* drawer & modal */
+.drawer{position:fixed;inset:0 0 0 auto;width:min(560px,100vw);background:var(--panel);box-shadow:-24px 0 48px -24px rgba(0,0,0,.4);transform:translateX(105%);transition:transform .2s;z-index:60;display:flex;flex-direction:column}
 .drawer.open{transform:none}
-.drawer header{padding:14px 18px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
-.drawer .body{padding:16px 18px;overflow:auto;flex:1}
-.drawer pre{white-space:pre-wrap;font-family:"IBM Plex Mono",monospace;font-size:12px;background:var(--soft);padding:12px;border-radius:8px;max-height:60vh;overflow:auto}
-.kv{display:grid;grid-template-columns:110px 1fr;gap:4px 10px;font-size:13px;margin-bottom:12px}
-.kv div:nth-child(odd){color:var(--muted)}
-.feed{max-height:340px;overflow:auto}
-.feed .it{padding:8px 0;border-bottom:1px solid var(--line);font-size:13px}
-.feed .it time{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted);display:block}
-.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%) translateY(120px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:10px;transition:transform .25s;z-index:60;max-width:90vw;font-size:13px}
+.drawer header{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;gap:10px;align-items:flex-start}
+.drawer .body{padding:18px 20px;overflow:auto;flex:1}
+.drawer pre{white-space:pre-wrap;font:12px/1.5 "JetBrains Mono",monospace;background:var(--soft);padding:12px;border-radius:10px;max-height:55vh;overflow:auto}
+.scrim{position:fixed;inset:0;background:rgba(10,20,36,.45);z-index:55;display:none}
+.scrim.open{display:block}
+.modal{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);background:var(--panel);border-radius:16px;padding:24px;z-index:70;width:min(420px,92vw);display:none;box-shadow:0 30px 60px -20px rgba(0,0,0,.5)}
+.modal.open{display:block}
+.modal input,.modal select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit;background:var(--panel);color:var(--ink);margin:4px 0 12px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(140px);background:var(--navy);color:#fff;padding:11px 18px;border-radius:12px;z-index:80;transition:transform .25s;max-width:90vw;font-size:13px}
 .toast.show{transform:translateX(-50%)}
-.nav{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 0}
-.nav a{font-size:12px;text-decoration:none;color:var(--muted);border:1px solid var(--line);padding:3px 9px;border-radius:999px;background:var(--panel)}
-.nav a:hover{color:var(--ink);border-color:var(--ink)}
-.story{border-left:3px solid var(--amber);padding:6px 12px;background:var(--amber-bg);border-radius:0 8px 8px 0;font-size:13px;margin-top:10px}
-.story b{color:var(--amber)}
-.timeline{position:relative;padding-left:16px}
-.timeline:before{content:"";position:absolute;left:4px;top:4px;bottom:4px;width:2px;background:var(--line)}
-.tl{position:relative;padding:4px 0 10px;font-size:13px}
-.tl:before{content:"";position:absolute;left:-15px;top:9px;width:8px;height:8px;border-radius:50%;background:var(--muted)}
-.tl.live:before{background:var(--red)}
-.tl.future:before{background:var(--accent)}
-.tl .d{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--muted)}
-.empty{color:var(--muted);font-style:italic}
-.dq li{font-size:12px;color:var(--muted);margin:2px 0}
-.overview-card{cursor:pointer;transition:border-color .15s}
-.overview-card:hover{border-color:var(--ink)}
-.flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.spacer{flex:1}
-footer{color:var(--muted);font-size:12px;margin-top:40px;border-top:1px solid var(--line);padding-top:14px}
-input.wk{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:6px;padding:4px 8px;font:inherit;font-size:12px;width:120px}
+.hero{background:linear-gradient(135deg,var(--navy),#1B3A6B);color:#fff;border-radius:var(--r);padding:22px;display:flex;gap:20px;align-items:center;flex-wrap:wrap}
+.hero .sub{color:#B9C9E2}
+.empty{color:var(--muted);font-style:italic;padding:12px 0}
+.kv{display:grid;grid-template-columns:120px 1fr;gap:6px 12px;font-size:13px;margin-bottom:12px}
+.kv div:nth-child(odd){color:var(--muted)}
+.lb{display:flex;align-items:center;gap:10px;padding:6px 0}
+.lb .bar{flex:1}
+.mono{font-family:"JetBrains Mono",monospace;font-size:12px}
+.howto p{max-width:760px}
 </style>
 </head>
 <body>
-<header class="top">
-  <div class="bar">
-    <div class="brand">◆ Deal Desk <small>drone SaaS · renewals &amp; expansion</small></div>
-    <div class="sync" id="sync"><span class="dot" id="dot"></span><span id="synctext">connecting…</span></div>
-    <nav class="tabs" id="tabs" role="tablist"></nav>
-    <button class="tab" id="theme" title="Toggle theme">◐</button>
-  </div>
-</header>
-<main id="app"><p class="empty">Loading…</p></main>
-<aside class="drawer" id="drawer" aria-hidden="true">
-  <header><div style="flex:1"><div class="sub" id="dkind"></div><h3 style="margin:2px 0 0;font-size:16px" id="dtitle"></h3></div><button class="btn" onclick="closeDrawer()">Close</button></header>
-  <div class="body" id="dbody"></div>
-</aside>
+<div class="app">
+  <aside class="side">
+    <div class="logo"><img src="/brand.svg" alt=""><div><b>Flightdeck</b><small>Revenue cockpit · drone-in-a-box</small></div></div>
+    <div id="nav"></div>
+    <div class="foot"><div class="live"><span class="dot" id="dot"></span><span id="livetext">Connecting…</span></div><button class="nav-i" id="theme" style="margin-top:8px;padding:6px 0">◐ Light / dark</button></div>
+  </aside>
+  <main id="main"><p class="empty">Loading Flightdeck…</p></main>
+</div>
+<div class="scrim" id="scrim" onclick="closeDrawer()"></div>
+<aside class="drawer" id="drawer"><header><div style="flex:1"><div class="small muted" id="dk"></div><h3 style="margin:2px 0 0" id="dt"></h3></div><button class="btn sm" onclick="closeDrawer()">Close</button></header><div class="body" id="db"></div></aside>
+<div class="modal" id="who">
+  <h3 style="margin:0 0 4px">Welcome to Flightdeck</h3><p class="muted small" style="margin:0 0 14px">Tell us who you are, so we can show your work first.</p>
+  <label class="small">Your name</label><input id="whoName" placeholder="e.g. Priya">
+  <label class="small">Your role</label><select id="whoRole"></select>
+  <button class="btn pri" style="width:100%" onclick="saveWho()">Start</button>
+</div>
 <div class="toast" id="toast"></div>
 <script>
-let S = null, view = localGet("view") || "overview";
+// ---------- state ----------
+let S = null, C = { messages: [], tasks: {}, points: {} };
+const ls = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch {} } };
+let me = JSON.parse(ls.get("fd_me") || "null");
+let route = ls.get("fd_route") || "today";
+let acctTab = ls.get("fd_tab") || "overview";
+let chatChan = "general", histFilter = "all", planScope = "mine", pipeAcct = "all";
 const $ = (s) => document.querySelector(s);
-const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
-function localGet(k) { try { return localStorage.getItem(k); } catch { return null; } }
-function localSet(k, v) { try { localStorage.setItem(k, v); } catch {} }
-const fmtD = (d) => d ? new Date(d.length === 10 ? d + "T00:00:00Z" : d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
-const ago = (iso) => { if (!iso) return "never"; const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? `${Math.round(s)}s ago` : s < 3600 ? `${Math.round(s / 60)}m ago` : `${Math.round(s / 3600)}h ago`; };
-const money = (a, n) => n == null ? "—" : `${a.symbol}${Math.round(n).toLocaleString("en-GB")}`;
-function chip(id) {
-  const e = S.evidence[id]; if (!e) return "";
-  const cls = e.kind === "fact" ? `fact-${e.status}` : "";
-  const short = id.startsWith("calc:") ? "calc · " + id.split(":").pop() : id.replace(/^[AB]\//, "");
-  return `<button class="chip ${cls}" title="${esc(e.label)}" onclick="openEv('${esc(id)}')">${esc(short)}</button>`;
-}
-const chips = (ids) => (ids || []).map(chip).join("");
-const stanceCls = (s) => s === "never met" ? "never" : s;
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const D = (d) => d ? new Date(d.length === 10 ? d + "T00:00:00Z" : d).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }) : "—";
+const DY = (d) => d ? new Date(d.length === 10 ? d + "T00:00:00Z" : d).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }) : "—";
+const ago = (iso) => { if (!iso) return "never"; const s = (Date.now() - new Date(iso)) / 1000; return s < 60 ? "just now" : s < 3600 ? `${Math.round(s / 60)} min ago` : s < 86400 ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / 86400)} d ago`; };
+const daysTo = (d) => Math.round((new Date(d + "T00:00:00Z") - new Date(S.asOf + "T00:00:00Z")) / 864e5);
+const COLORS = ["#2F80ED", "#FF6B2C", "#1F9D63", "#6E56F0", "#D93B30", "#C98303", "#0EA5B7"];
+const avColor = (n) => COLORS[[...String(n)].reduce((s, c) => s + c.charCodeAt(0), 0) % COLORS.length];
+const initials = (n) => String(n).replace(/\(.*\)/, "").trim().split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const av = (n, size = 28) => `<span class="av" style="background:${avColor(n)};width:${size}px;height:${size}px;font-size:${size / 2.4}px">${esc(initials(n))}</span>`;
+const lvl = { red: "c-red", amber: "c-amber", green: "c-green" };
+const acc = (id) => S.accounts.find((a) => a.id === id);
+const K = (a, n) => n == null ? "—" : n >= 1e6 ? `${a.symbol}${(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `${a.symbol}${Math.round(n / 1e3)}k` : `${a.symbol}${Math.round(n)}`;
+const shortName = (a) => a.id === "A" ? "Eastern Counties" : "Aldermoor";
 
+// Sources: shown as a small 📎 chip with a human label; full record in the drawer.
+function src(ids, label) {
+  ids = [...new Set((ids || []).filter((i) => S.evidence[i]))];
+  if (!ids.length) return "";
+  const first = S.evidence[ids[0]];
+  const text = label || (ids.length === 1 ? first.human : `${first.human} +${ids.length - 1}`);
+  return `<button class="src" title="See where this comes from" onclick='openSources(${JSON.stringify(ids).replace(/'/g, "&#39;")})'>📎 ${esc(text)}</button>`;
+}
+function linkCites(text) { // [id] in coach answers -> source chips
+  return esc(text).replace(/\[([^\]\s]{2,80})\]/g, (m, id) => { const raw = id.replace(/&amp;/g, "&"); return S.evidence[raw] ? src([raw]) : m; }).replace(/\*\*(.+?)\*\*/g, "<b>$1</b>");
+}
+
+// ---------- data ----------
 async function load() {
-  const r = await fetch("/api/state"); S = await r.json(); render();
+  const [s, c] = await Promise.all([fetch("/api/state").then((r) => r.json()), fetch("/api/collab").then((r) => r.json())]);
+  S = s; C = c; render();
 }
-function setView(v) { view = v; localSet("view", v); render(); window.scrollTo({ top: 0 }); }
+async function loadCollab() { C = await fetch("/api/collab").then((r) => r.json()); if (route === "chat") renderChatStream(); else render(); }
+function go(r, tab) { route = r; ls.set("fd_route", r); if (tab) { acctTab = tab; ls.set("fd_tab", tab); } render(); window.scrollTo({ top: 0 }); }
+function setTab(t) { acctTab = t; ls.set("fd_tab", t); render(); }
 
-function renderTabs() {
-  const t = [["overview", "Both accounts"], ...S.accounts.map((a) => [a.id, `${a.id} · ${a.name.split(" ").slice(0, 2).join(" ")}`]), ["live", "Live feed"]];
-  $("#tabs").innerHTML = t.map(([k, l]) => `<button class="tab" role="tab" aria-selected="${view === k}" onclick="setView('${k}')">${esc(l)}</button>`).join("");
-}
-function renderSync() {
+// ---------- shell ----------
+function renderNav() {
+  const openT = S.accounts.reduce((s, a) => s + a.tickets.filter((t) => t.open).length, 0);
+  const myOpen = allMoves().filter((m) => isMine(m) && status(m) !== "done").length;
+  const items = [["today", "🏠", "Today", myOpen], ["pipeline", "🧭", "Pipeline"], ["_h", "Accounts"], ...S.accounts.map((a) => [`acct:${a.id}`, a.healthScore.color === "red" ? "🔴" : a.healthScore.color === "amber" ? "🟠" : "🟢", shortName(a)]), ["_h", "Team"], ["tickets", "🎫", "Tickets", openT], ["chat", "💬", "Team chat"], ["updates", "📡", "Live updates"], ["how", "📘", "How it works"]];
+  $("#nav").innerHTML = items.map(([k, ic, l, n]) => k === "_h" ? `<div class="nav-h">${ic}</div>` : `<button class="nav-i ${route === k ? "on" : ""}" onclick="go('${k}')"><span class="ic">${ic}</span>${esc(l)}${n ? `<span class="badge">${n}</span>` : ""}</button>`).join("");
   const m = S.meta || {};
-  $("#dot").className = "dot" + (m.lastError && (!m.lastOk || m.lastError.at > m.lastOk) ? " err" : "");
-  const next = m.nextTick ? Math.max(0, Math.round((new Date(m.nextTick) - Date.now()) / 1000)) : null;
-  $("#synctext").innerHTML = `as of <b>${fmtD(S.asOf)}</b> · last MCP call ${ago(m.lastOk)}${next != null ? ` · next in ${next}s` : ""}${S.pendingNotes.length ? ` · ${S.pendingNotes.length} note(s) queued` : ""}`;
+  const err = m.lastError && (!m.lastOk || m.lastError.at > m.lastOk);
+  $("#dot").className = "dot" + (err ? " err" : "");
+  $("#livetext").textContent = err ? "Reconnecting to data…" : `Live · checked ${ago(m.lastOk)}`;
 }
-setInterval(() => S && renderSync(), 5000);
-
+function topbar(title, sub) {
+  return `<div class="topbar"><div><h1>${title}</h1>${sub ? `<div class="sub">${sub}</div>` : ""}</div><span class="spacer"></span>
+    <div class="me" onclick="askWho()" title="Change who you are">${av(me?.name || "Guest")}<div style="line-height:1.15"><b style="font-size:13px">${esc(me?.name || "Guest")}</b><div class="small muted">${esc(me?.role || "Pick your role")}</div></div></div></div>`;
+}
 function render() {
-  renderTabs(); renderSync();
-  if (view === "overview") return renderOverview();
-  if (view === "live") return renderLive();
-  const a = S.accounts.find((x) => x.id === view) || S.accounts[0];
-  renderAccount(a);
+  if (!S) return;
+  renderNav();
+  const r = route;
+  if (r === "today") return renderToday();
+  if (r === "pipeline") return renderPipeline();
+  if (r.startsWith("acct:")) return renderAccount(acc(r.slice(5)) || S.accounts[0]);
+  if (r === "tickets") return renderTickets();
+  if (r === "chat") return renderChat();
+  if (r === "updates") return renderUpdates();
+  if (r === "how") return renderHow();
+  go("today");
 }
 
-function renderOverview() {
-  const cards = S.accounts.map((a) => {
-    const top = a.moves[0]; const reds = a.risks.filter((r) => r.level === "red");
-    const hc = a.health.red >= 3 ? "red" : a.health.red ? "amber" : "green";
-    return `<div class="card overview-card" onclick="setView('${a.id}')">
-      <div class="flex"><span class="pill ${hc}">${esc(a.health.label)}</span><span class="sub">${esc(a.sector || "")}</span><span class="spacer"></span><span class="sub mono">${a.currency}</span></div>
-      <h2 style="margin:8px 0 2px;font-size:20px">${esc(a.name)}</h2>
-      <div class="sub">${esc(a.what_they_bought || "")}</div>
-      <div class="grid g3" style="margin-top:14px">
-        <div><div class="sub">Book you can back</div><div class="kpi small">${money(a, a.book.backed)}</div>${chip(a.book.backedCalc)}</div>
-        <div><div class="sub">Not backed by usage</div><div class="kpi small" style="color:var(--red)">${money(a, a.book.at_risk)}</div>${chip(a.book.deals.find((d) => d.basis.length)?.basis[1])}</div>
-        <div><div class="sub">Renewal</div><div class="kpi small">${a.days_to_renewal} days</div><div class="sub">${fmtD(a.term_ends)} · no auto-renew</div></div>
-      </div>
-      <div class="story"><b>Official story:</b> ${esc(a.official_story)}</div>
-      ${top ? `<div style="margin-top:14px"><div class="sub">Monday, first thing</div><div style="font-weight:600;margin-top:2px">${esc(top.title)}</div><div class="meta" style="margin-top:4px"><span><b>${esc(top.owner.name)}</b></span><span>due <b>${fmtD(top.due)}</b></span></div></div>` : ""}
-      <div style="margin-top:12px"><div class="sub">${reds.length} red risk(s)</div>${reds.slice(0, 3).map((r) => `<div style="font-size:13px;margin-top:3px">● ${esc(r.title)} <span class="sub">— turns bad ${fmtD(r.turns_bad)}</span></div>`).join("")}</div>
-    </div>`;
-  }).join("");
-  const dates = S.accounts.flatMap((a) => a.keyDates.map((k) => ({ ...k, acc: a.id }))).filter((k) => k.date >= S.asOf).sort((x, y) => x.date.localeCompare(y.date)).slice(0, 12);
-  $("#app").innerHTML = `
-    <div class="qhead"><h2>Portfolio — what the manager needs on Monday</h2><p>Two accounts, five answers each. Every figure carries the id it came from — click any <span class="chip">chip</span> to trace it.</p></div>
-    <div class="grid g2">${cards}</div>
-    <div class="grid g2" style="margin-top:14px">
-      <div class="card"><h3>Next 12 dates that matter</h3><table><tbody>${dates.map((k) => `<tr><td class="mono" style="white-space:nowrap">${fmtD(k.date)}</td><td><span class="pill ${k.level === "move" ? "blue" : k.level}">${k.level === "move" ? "do" : k.level}</span></td><td><b>${k.acc}</b> ${esc(k.what)}</td></tr>`).join("")}</tbody></table></div>
-      <div class="card"><h3>Picked up by the sync</h3>${feedHTML(8)}</div>
+// ---------- tasks ----------
+const allMoves = () => S.accounts.flatMap((a) => a.moves.map((m) => ({ ...m, acc: a })));
+const status = (m) => C.tasks[m.id]?.status || "todo";
+const isMine = (m) => !me?.role || m.role === me.role || (m.withRoles || []).includes(me.role) || me.role === "Sales Manager";
+async function setStatus(id, st) {
+  await fetch("/api/task", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ id, status: st, by: me?.name || "Guest", role: me?.role || "" }) });
+  if (st === "done") toast("Nice work — +10 points for the team 🚀");
+  loadCollab();
+}
+function dueChip(d) {
+  const n = daysTo(d);
+  const c = n < 0 ? "c-red" : n <= 2 ? "c-red" : n <= 7 ? "c-amber" : "c-blue";
+  return `<span class="pill ${c}">${n < 0 ? `${-n}d overdue` : n === 0 ? "Due today" : `Due ${D(d)} · ${n}d`}</span>`;
+}
+function actionCard(m, opts = {}) {
+  const st = status(m);
+  const c = daysTo(m.due) <= 2 ? "var(--red)" : daysTo(m.due) <= 7 ? "var(--amber)" : "var(--sky)";
+  const by = C.tasks[m.id];
+  const h = m.how || {};
+  return `<div class="act ${st === "done" ? "done" : ""}" style="--c:${c}">
+    <div class="row" style="align-items:flex-start;flex-wrap:nowrap"><div class="rank">${m.rank}</div>
+      <div style="flex:1;min-width:0"><p class="t">${esc(m.short)}</p>
+        <div class="row small" style="margin-top:6px">${av(m.owner.name, 22)}<b>${esc(m.owner.name)}</b><span class="pill c-violet">${esc(m.role)}</span>${(m.with || []).map((w) => `<span class="muted">+ ${esc(w.name)}</span>`).join("")}${dueChip(m.due)}${opts.showAcct ? `<span class="pill c-grey">${esc(shortName(m.acc || acc(m.account)))}</span>` : ""}</div>
+        ${opts.compact ? "" : `<div class="why">${esc(m.why)}</div>`}
+        <div class="row" style="margin-top:6px"><div class="seg">${["todo", "doing", "done"].map((s) => `<button class="${st === s ? "on " + s : ""}" onclick="setStatus('${esc(m.id)}','${s}')">${s === "todo" ? "To do" : s === "doing" ? "In progress" : "✓ Done"}</button>`).join("")}</div>
+          ${by && st !== "todo" ? `<span class="small muted">${esc(by.by)} · ${ago(by.at)}</span>` : ""}
+          <span class="spacer"></span>${src(m.cites, "Why")}<button class="btn sm" onclick="discuss('${esc(m.id)}')">💬 Discuss</button></div>
+        ${opts.compact ? "" : `<details class="how"><summary>How to do it · ${esc(h.method || "")}</summary>
+          <ol>${(h.steps || []).map((s) => `<li>${esc(s)}</li>`).join("")}</ol>
+          ${h.talk?.length ? `<div class="small"><b>Ask them:</b> ${h.talk.map((t) => `“${esc(t)}”`).join(" · ")}</div>` : ""}
+          ${h.draft ? `<div style="margin-top:8px"><div class="row small"><b>Ready-to-send draft</b> <span class="muted">to ${esc(h.draft.to)}</span><span class="spacer"></span><button class="btn sm" onclick="copyDraft('${esc(m.id)}')">Copy</button><button class="btn sm" onclick="logToMcp('${esc(m.id)}')">Log to Account Quest</button></div><div class="draft"><b>Subject:</b> ${esc(h.draft.subject)}\n\n${esc(h.draft.body)}</div></div>` : `<div class="row" style="margin-top:6px"><span class="spacer"></span><button class="btn sm" onclick="logToMcp('${esc(m.id)}')">Log to Account Quest</button></div>`}
+        </details>`}
+      </div></div></div>`;
+}
+
+// ---------- TODAY ----------
+function renderToday() {
+  const moves = allMoves().sort((a, b) => a.due.localeCompare(b.due) || a.rank - b.rank);
+  const mine = moves.filter((m) => planScope === "all" || isMine(m));
+  const done = moves.filter((m) => status(m) === "done").length;
+  const pct = Math.round((100 * done) / Math.max(1, moves.length));
+  const reds = S.accounts.flatMap((a) => a.risks.filter((r) => r.level === "red").map((r) => ({ ...r, a }))).sort((x, y) => String(x.turns_bad || "9").localeCompare(String(y.turns_bad || "9"))).slice(0, 5);
+  const board = Object.entries(C.points).sort((a, b) => b[1] - a[1]).slice(0, 5);
+  const hr = new Date().getHours();
+  $("#main").innerHTML = topbar(`Good ${hr < 12 ? "morning" : hr < 18 ? "afternoon" : "evening"}, ${esc(me?.name || "team")} 👋`, `Here is what needs you, as of ${DY(S.asOf)}.`) + `
+  <div class="grid g2">${S.accounts.map((a) => `<div class="card" style="cursor:pointer" onclick="go('acct:${a.id}','overview')">
+    <div class="row" style="flex-wrap:nowrap"><div class="ring" style="--p:${a.healthScore.score};--col:var(--${a.healthScore.color === "green" ? "green" : a.healthScore.color === "amber" ? "amber" : "red"})"><b>${a.healthScore.score}</b></div>
+      <div style="min-width:0"><div class="row"><b style="font-size:16px">${esc(a.name)}</b><span class="pill ${lvl[a.healthScore.color]}">${a.healthScore.label}</span></div>
+      <div class="small muted">Renews in <b style="color:var(--ink)">${a.days_to_renewal} days</b> · ${K(a, a.annual)}/year · ${esc(a.sector)}</div></div></div>
+    <p style="margin:12px 0 0">${esc(a.summary)}</p></div>`).join("")}</div>
+  <div class="grid g21" style="margin-top:16px">
+    <div class="card"><h3>✅ ${planScope === "all" ? "Team actions" : "Your actions"} <span class="sub">ranked by deadline</span><span class="spacer"></span><div class="seg"><button class="${planScope === "mine" ? "on" : ""}" onclick="planScope='mine';render()">Mine</button><button class="${planScope === "all" ? "on" : ""}" onclick="planScope='all';render()">Whole team</button></div></h3>
+      ${mine.length ? mine.map((m) => actionCard(m, { compact: true, showAcct: true })).join("") : `<p class="empty">Nothing assigned to ${esc(me?.role || "you")} right now. Switch to “Whole team” to help out.</p>`}
+      <button class="btn" onclick="go('acct:A','plan')">Open the full plan with how-tos →</button></div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><h3>🚀 Team momentum</h3><div class="row"><div class="ring sm" style="--p:${pct};--col:var(--green)"><b>${pct}%</b></div><div><b>${done} of ${moves.length}</b> actions done this week<div class="small muted">Done = +10 points · chat = +1</div></div></div>
+        <div style="margin-top:10px">${board.length ? board.map(([n, p], i) => `<div class="lb">${["🥇", "🥈", "🥉", "4.", "5."][i]} ${av(n, 22)}<span style="min-width:90px">${esc(n)}</span><div class="bar"><i style="width:${(100 * p) / board[0][1]}%;background:var(--orange)"></i></div><b>${p}</b></div>`).join("") : '<p class="empty small">No points yet. Finish an action to get on the board.</p>'}</div></div>
+      <div class="card"><h3>🚨 Watch out</h3>${reds.map((r) => `<div class="li"><span class="pill c-red">${r.turns_bad ? D(r.turns_bad) : "now"}</span><div class="body"><div class="tt small">${esc(r.title)}</div><div class="small muted">${esc(shortName(r.a))}</div></div></div>`).join("")}</div>
     </div>
-    ${footer()}`;
+  </div>`;
 }
 
-function feedHTML(n) {
-  const ch = S.changes.slice(0, n);
-  const sig = S.accounts.flatMap((a) => a.signals.map((id) => S.evidence[id]));
-  return `<div class="feed">${ch.length ? ch.map((c) => `<div class="it"><time>${new Date(c.at).toLocaleString("en-GB")} · ${esc(c.kind)}</time>${esc(c.summary)} ${c.ref ? chip(c.ref) : ""}</div>`).join("") : ""}
-    ${sig.map((e) => `<div class="it"><time>${fmtD(e.date)} · live event (get_signals)</time><b>${esc(e.label)}</b><br><span class="sub">${esc(e.text)}</span> ${chip(e.id)}</div>`).join("")}</div>`;
+// ---------- PIPELINE ----------
+function renderPipeline() {
+  const deals = S.accounts.filter((a) => pipeAcct === "all" || a.id === pipeAcct).flatMap((a) => a.pipeline.map((p) => ({ ...p, a })));
+  const stageColor = { prospect: "var(--grey)", discover: "var(--sky)", qualify: "var(--violet)", prove: "var(--violet)", propose: "var(--orange)", commit: "var(--amber)", won: "var(--green)", lost: "var(--red)" };
+  const fc = { Commit: "c-green", "Best case": "c-amber", Pipeline: "c-blue", Omitted: "c-grey", Won: "c-green", Lost: "c-red" };
+  $("#main").innerHTML = topbar("Pipeline", "Every deal, renewal and upsell — by stage. Click a card for its qualification checklist.") + `
+  <div class="grid g2">${S.accounts.map((a) => `<div class="card"><h3>${esc(a.name)} <span class="sub">forecast</span></h3><div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px">
+    ${[["Won", "c-green", "Signed or delivered"], ["Commit", "c-green", "Backed by real usage"], ["Best case", "c-amber", "Needs work to land"], ["Pipeline", "c-blue", "Not priced yet"]].map(([k, c, h]) => `<div><span class="pill ${c}">${k}</span><div class="mid" style="margin-top:4px">${k === "Pipeline" ? a.pipeline.filter((p) => p.forecast === "Pipeline").length + " deals" : K(a, a.forecastCats[k])}</div><div class="small muted">${h}</div></div>`).join("")}</div>
+    <div style="margin-top:8px">${src(a.forecast.cites, "How this is worked out")}</div></div>`).join("")}</div>
+  <div class="row" style="margin:18px 0 10px"><b>Board</b>${[["all", "All accounts"], ...S.accounts.map((a) => [a.id, shortName(a)])].map(([k, l]) => `<button class="filter ${pipeAcct === k ? "on" : ""}" onclick="pipeAcct='${k}';render()">${esc(l)}</button>`).join("")}<span class="spacer"></span><span class="small muted">Qualification: <span class="medd" style="display:inline-flex"><span class="green">✓</span></span> proven <span class="medd" style="display:inline-flex"><span class="amber">~</span></span> partly <span class="medd" style="display:inline-flex"><span class="red">?</span></span> unknown</span></div>
+  <div class="board">${S.stages.map((st) => { const ds = deals.filter((d) => d.stage === st.key); return `<div class="col"><h4>${st.label} <small>${ds.length}</small></h4><div class="small muted" style="margin:-4px 0 8px">${esc(st.hint)}</div>
+    ${ds.map((d) => `<div class="dc" style="--c:${stageColor[st.key]}" onclick="openDeal('${d.a.id}','${esc(d.id)}')"><div class="row" style="gap:6px"><span class="pill c-grey">${esc(shortName(d.a))}</span>${d.upsell ? '<span class="pill c-orange">Upsell</span>' : ""}</div>
+      <div class="tt" style="margin-top:6px">${esc(d.title)}</div>
+      <div class="row small" style="margin-top:6px;gap:6px"><b>${esc(d.valueText)}</b><span class="pill ${fc[d.forecast] || "c-grey"}">${esc(d.forecast)}</span></div>
+      ${d.decider ? `<div class="small muted" style="margin-top:4px">Decides: ${esc(d.decider)}</div>` : ""}
+      ${d.meddpicc ? `<div class="medd" title="MEDDPICC qualification">${d.meddpicc.map((m) => `<span class="${m.s}" title="${esc(m.name)}: ${esc(m.note)}">${m.k}</span>`).join("")}</div>` : ""}
+    </div>`).join("") || '<div class="small muted">—</div>'}</div>`; }).join("")}</div>`;
+}
+function openDeal(aid, id) {
+  const a = acc(aid), d = a.pipeline.find((x) => x.id === id);
+  $("#dk").textContent = `${shortName(a)} · ${d.stageLabel}${d.forecast ? " · " + d.forecast : ""}`;
+  $("#dt").textContent = d.title;
+  $("#db").innerHTML = `<div class="kv"><div>Value</div><div><b>${esc(d.valueText)}</b>${d.backed ? ` · ${K(a, d.backed)} backed by usage` : ""}${d.atRisk ? ` · ${K(a, d.atRisk)} at risk` : ""}</div>
+    ${d.decider ? `<div>Decides</div><div>${esc(d.decider)}</div>` : ""}${d.blocker ? `<div>What blocks it</div><div>${esc(d.blocker)}</div>` : ""}${d.closeBy ? `<div>Must close by</div><div>${DY(d.closeBy)}</div>` : ""}
+    ${d.next ? `<div>Next stage</div><div>${esc(d.next)}</div>` : ""}</div>
+    ${d.exit?.length ? `<div class="how" style="margin:0 0 14px"><b>To move forward</b><ol>${d.exit.map((x) => `<li>${esc(x)}</li>`).join("")}</ol></div>` : ""}
+    ${d.meddpicc ? `<h4 style="margin:6px 0">Qualification checklist (MEDDPICC) · <span class="pill ${d.score >= 65 ? "c-green" : d.score >= 40 ? "c-amber" : "c-red"}">${d.winLabel}</span></h4>
+    ${d.meddpicc.map((m) => `<div class="li"><span class="pill ${lvl[m.s]}" style="min-width:26px;justify-content:center">${m.k}</span><div class="body"><div class="tt small">${esc(m.name)} <span class="muted" style="font-weight:400">— ${esc(m.q)}</span></div><div class="small">${esc(m.note)}</div>${m.s !== "green" ? `<div class="small muted">Next: ${esc(m.fix)}</div>` : ""}${src(m.cites)}</div></div>`).join("")}` : ""}
+    <div style="margin-top:12px">${src(d.cites, "All sources for this deal")}</div>`;
+  openDrawer();
 }
 
-function renderLive() {
-  const f = S.fetchedAt || {};
-  $("#app").innerHTML = `
-    <div class="qhead"><h2>Live feed &amp; sync</h2><p>One MCP call a minute (the token limit). Every source is re-read at least every 5 minutes; live events every ~2½ minutes. New data changes the answers without a code change.</p></div>
-    <div class="grid g2">
-      <div class="card"><h3>What changed</h3>${feedHTML(60)}</div>
-      <div class="card"><h3>Sources &amp; freshness</h3><table><thead><tr><th>Source</th><th>Last fetched</th></tr></thead><tbody>${Object.entries(f).sort().map(([k, v]) => `<tr><td class="mono">${esc(k)}</td><td>${new Date(v).toLocaleString("en-GB")} <span class="sub">(${ago(v)})</span></td></tr>`).join("")}</tbody></table>
-        ${S.meta.lastError ? `<p class="sub" style="color:var(--red)">Last error ${ago(S.meta.lastError.at)} on ${esc(S.meta.lastError.job)}: ${esc(S.meta.lastError.message)}</p>` : ""}
-        <h3 style="margin-top:18px">Notes written back (list_notes)</h3>${notesHTML(null)}
-        <h3 style="margin-top:18px">Queued for write_note</h3>${S.pendingNotes.length ? S.pendingNotes.map((n) => `<div class="sub">• [${esc(n.account || "-")}/${esc(n.kind || "note")}] ${esc(n.title || n.text.slice(0, 80))}</div>`).join("") : '<p class="empty">Nothing queued.</p>'}
-      </div>
-    </div>${footer()}`;
-}
-function notesHTML(acc) {
-  const all = S.accounts.flatMap((a) => a.notes).filter((n, i, arr) => arr.findIndex((x) => JSON.stringify(x) === JSON.stringify(n)) === i).filter((n) => !acc || !n.account || n.account === acc);
-  return all.length ? all.slice(-12).reverse().map((n) => `<div style="font-size:13px;padding:5px 0;border-bottom:1px solid var(--line)"><span class="pill grey">${esc(n.kind || "note")}</span> <b>${esc(n.title || "")}</b> <span class="sub">${esc((n.text || "").slice(0, 160))}</span></div>`).join("") : '<p class="empty">None yet.</p>';
-}
-
+// ---------- ACCOUNT ----------
 function renderAccount(a) {
-  const renewal = a.book.deals.find((d) => d.basis.length);
-  const won = a.book.offers.filter((o) => o.status === "won");
-  const total = (renewal?.backed || 0) + (renewal?.at_risk || 0);
-  $("#app").innerHTML = `
-  <div class="flex"><div><div class="sub">Account ${a.id} · ${esc(a.sector || "")} · ${a.currency}</div><h1 style="margin:2px 0;font-size:26px;letter-spacing:-.02em">${esc(a.name)}</h1></div><span class="spacer"></span>
-    <span class="pill ${a.health.red >= 3 ? "red" : a.health.red ? "amber" : "green"}">${esc(a.health.label)} · ${a.health.red} red / ${a.health.amber} amber</span></div>
-  <div class="nav">${[["q1", "1 Book"], ["q2", "2 Power"], ["q3", "3 First moves"], ["q4", "4 Going wrong"], ["q5", "5 Unknowns"], ["growth", "Upsell & cross-sell"], ["usage", "Usage"], ["timeline", "Timeline"]].map(([h, l]) => `<a href="#${h}">${l}</a>`).join("")}</div>
-  <div class="story"><b>Official story (unverified):</b> ${esc(a.official_story)}</div>
-
-  <section class="q" id="q1"><div class="qhead"><span class="qnum">Q1</span><h2>What is the book worth?</h2><p>Each deal at a value you can back. What you cannot back is shown apart.</p></div>
-    <div class="grid g4">
-      <div class="card"><h3>Book you can back</h3><div class="kpi">${money(a, a.book.backed)}</div>${chip(a.book.backedCalc)}<div class="sub">Renewal backed by usage + upsells won</div></div>
-      <div class="card"><h3>Renewal not backed</h3><div class="kpi" style="color:var(--red)">${money(a, a.book.at_risk)}</div>${renewal ? chip(renewal.basis[1]) : ""}<div class="sub">Docks nobody uses</div></div>
-      <div class="card"><h3>Contract / year</h3><div class="kpi">${money(a, a.annual)}</div>${chip(a.id + "/contract.txt")}${chip("calc:" + a.id + ":per_dock")}<div class="sub">${money(a, a.perDock)} per dock</div></div>
-      <div class="card"><h3>Open offers</h3><div class="kpi">${money(a, a.book.open_offers)}</div>${chips(a.book.offers.filter((o) => o.status === "open").map((o) => o.id))}<div class="sub">Pipeline — not counted</div></div>
-    </div>
-    ${renewal ? `<div class="card" style="margin-top:14px"><h3>Renewal split</h3>
-      <div class="stack"><div style="width:${(100 * renewal.backed) / total}%;background:var(--green)"></div><div style="width:${(100 * renewal.at_risk) / total}%;background:var(--red)"></div></div>
-      <div class="legend"><span><i style="background:var(--green)"></i>Backed ${money(a, renewal.backed)}</span><span><i style="background:var(--red)"></i>At risk ${money(a, renewal.at_risk)}</span></div>
-      ${renewal.basis.map((b) => `<div class="sub" style="margin-top:6px">${esc(S.evidence[b].text)} ${chips(S.evidence[b].cites)}</div>`).join("")}</div>` : ""}
-    <div class="card tablewrap" style="margin-top:14px"><h3>Deals &amp; offers</h3><table><thead><tr><th>Deal</th><th>Stage</th><th class="num">Backed</th><th class="num">At risk</th><th>Blocker / basis</th><th>Sources</th></tr></thead><tbody>
-      ${a.book.deals.map((d) => `<tr><td><b>${esc(d.title)}</b><div class="sub mono">${esc(d.id)}</div></td><td><span class="pill ${d.unknown ? "grey" : d.stage === "qualified" ? "blue" : "grey"}">${esc(d.stage)}</span></td><td class="num">${d.backed ? money(a, d.backed) : "—"}</td><td class="num">${d.at_risk ? money(a, d.at_risk) : "—"}</td>
-        <td style="max-width:360px">${d.blocker ? `<div><b>On file:</b> ${esc(d.blocker.text)} (${esc(d.blocker.status)})</div>` : ""}${d.debrief?.blocker ? `<div><b>Debrief:</b> ${esc(d.debrief.blocker)}</div>` : ""}${d.debrief?.unlock ? `<div><b>Unlock:</b> ${esc(d.debrief.unlock)}</div>` : ""}${!d.backed && !d.unknown ? '<div class="sub">No value on file — not counted.</div>' : ""}${d.unknown ? '<div class="sub">Never came up in discovery.</div>' : ""}${d.debrief?.debrief_value_usd ? `<div class="sub">Debrief scored it $${d.debrief.debrief_value_usd.toLocaleString()}</div>` : ""}</td>
-        <td>${chips(d.cites)}</td></tr>`).join("")}
-      ${a.book.offers.map((o) => `<tr><td><b>${esc(o.title)}</b><div class="sub mono">${esc(o.id)} · offer to ${esc(o.pitch_to)}</div></td><td><span class="pill ${o.status === "won" ? "green" : o.status === "open" ? "blue" : "grey"}">${esc(o.status)}</span></td><td class="num">${o.status === "won" ? money(a, o.value) : "—"}</td><td class="num">—</td><td class="sub">${o.status === "won" ? "Won this morning — counts once delivered" : o.status === "open" ? `${money(a, o.value)} pipeline, not counted` : `${money(a, o.value)} declined — excluded`}</td><td>${chips(o.cites)}</td></tr>`).join("")}
-    </tbody></table></div>
-    <div class="card" style="margin-top:14px"><h3>Shown apart — claims and asks nobody has backed</h3>${a.book.claimsApart.length ? `<table><tbody>${a.book.claimsApart.map((c) => `<tr><td>“${esc(c.text)}”<div class="sub">${esc(c.by)} · ${c.told ? "told" : "claim"}</div></td><td class="num">${c.implied ? money(a, c.implied) : "—"}<div class="sub">${esc(c.impliedNote || "")}</div></td><td>${chip(c.id)}</td></tr>`).join("")}</tbody></table>` : '<p class="empty">None.</p>'}</div>
-  </section>
-
-  <section class="q" id="q2"><div class="qhead"><span class="qnum">Q2</span><h2>Who holds the power?</h2><p>Who decides, pays, uses, could block — and where each stands with you.</p></div>
-    <div class="grid g2">${a.power.map((p) => `<div class="card"><h3>${esc(p.title)}</h3>${p.roles.length ? p.roles.map((r) => `<div class="role"><div class="r">${esc(r.role)}</div><div><b>${esc(r.who)}</b>${r.role_title ? ` <span class="sub">${esc(r.role_title)}</span>` : ""}<span class="stance ${stanceCls(r.stance)}">${esc(r.stance)}</span><div class="sub">${esc(r.why)}</div>${chips(r.cites)}</div></div>`).join("") : '<p class="empty">Nobody known.</p>'}</div>`).join("")}</div>
-    <div class="card tablewrap" style="margin-top:14px"><h3>People</h3><table><thead><tr><th>Person</th><th>Stance</th><th>Last contact</th><th>Platform use</th><th>Sources</th></tr></thead><tbody>
-      ${a.people.map((p) => `<tr><td><b>${esc(p.name)}</b><div class="sub">${esc(p.role)}</div></td><td><span class="stance ${stanceCls(p.relationship)}">${esc(p.relationship)}</span></td><td>${p.last_contact ? fmtD(p.last_contact) : "—"}</td><td>${p.platform ? `${p.platform.sign_ins_90d} sign-ins / 90d` : "—"}</td><td>${chips(p.cites)}</td></tr>`).join("")}
-    </tbody></table></div>
-  </section>
-
-  <section class="q" id="q3"><div class="qhead"><span class="qnum">Q3</span><h2>What do you do first?</h2><p>Ranked by value at stake × urgency × days left. Each with an owner, a date and the deal it moves.</p></div>
-    <div class="card">${a.moves.map((m, i) => `<div class="move ${i < 3 ? "top" : ""}"><div class="rank">${m.rank}</div><div><h4>${esc(m.title)}</h4><p>${esc(m.why)}</p>
-      <div class="meta"><span>Owner <b>${esc(m.owner.name)}</b>${m.with?.length ? ` with ${m.with.map((w) => esc(w.name)).join(", ")}` : ""}</span><span>Due <b>${fmtD(m.due)}</b> <span class="sub">(${m.days_left}d)</span></span>${m.deal ? `<span>Moves <span class="mono">${esc(m.deal)}</span></span>` : ""}<span class="sub">score ${m.score}</span></div>
-      <div style="margin-top:4px">${chips([m.owner.cite, ...m.cites])}</div></div>
-      <div class="act"><button class="btn" onclick='writeBack(${JSON.stringify({ account: a.id, kind: "next_step", title: m.title.slice(0, 150), text: `${m.why}\nOwner: ${m.owner.name}. Due: ${m.due}. Deal: ${m.deal}. Sources: ${m.cites.join(", ")}` }).replace(/'/g, "&#39;")})'>Write to MCP</button></div></div>`).join("")}</div>
-  </section>
-
-  <section class="q" id="q4"><div class="qhead"><span class="qnum">Q4</span><h2>What is about to go wrong?</h2><p>Deadlines at risk, people going cold, stuck deals — and the date each turns bad.</p></div>
-    <div class="card">${a.risks.map((r) => `<div class="risk"><div><span class="pill ${r.level}">${r.level}</span><div class="sub" style="margin-top:4px">${esc(r.type)}</div></div><div><h4>${esc(r.title)}</h4><p>${esc(r.detail)}</p>${chips(r.cites)}</div><div class="when">${r.turns_bad ? `turns bad<b>${fmtD(r.turns_bad)}</b><span class="sub">${esc(r.turns_bad_why || "")}</span>` : '<span class="sub">no date — standing risk</span>'}</div></div>`).join("")}</div>
-  </section>
-
-  <section class="q" id="q5"><div class="qhead"><span class="qnum">Q5</span><h2>What do you still not know?</h2><p>The gaps the plan rests on, why each matters, and who could fill it.</p></div>
-    <div class="card tablewrap"><table><thead><tr><th>Unknown</th><th>Why it matters</th><th>Who could tell you</th><th>Sources</th></tr></thead><tbody>
-      ${a.gaps.map((g) => `<tr><td><b>${esc(g.what)}</b></td><td class="sub">${esc(g.why)}</td><td>${esc(g.who)}</td><td>${chips(g.cites)}</td></tr>`).join("")}
-    </tbody></table></div>
-  </section>
-
-  <section class="q" id="growth"><div class="qhead"><span class="qnum">+</span><h2>Upsell &amp; cross-sell</h2><p>Where revenue can grow — sized only where the data allows.</p></div>
-    <div class="card tablewrap"><table><thead><tr><th>Opportunity</th><th>Type</th><th>Size</th><th>Next</th><th>Sources</th></tr></thead><tbody>
-      ${a.growth.map((g) => `<tr><td><b>${esc(g.title)}</b><div class="sub">${esc(g.stage)}</div></td><td>${esc(g.kind)}</td><td>${esc(g.sizing)}</td><td class="sub">${esc(g.next)}</td><td>${chips(g.cites)}</td></tr>`).join("")}
-    </tbody></table></div>
-  </section>
-
-  <section class="q" id="usage"><div class="qhead"><span class="qnum">≈</span><h2>Usage — the evidence under the renewal</h2><p>Built from raw flights.csv, device_events.csv${a.forceLog ? " and the verified force log" : ""}.</p></div>
-    <div class="grid g2">
-      <div class="card"><h3>Flights per month ${chip(a.id + "/flights.csv")}</h3>${barsHTML(a.usage.months.map((m) => [m.month.slice(5), m.flights]))}<div style="height:18px"></div>
-        <h3 style="margin-top:12px">Docks flying per month (of ${a.usage.totalDocks})</h3>${barsHTML(a.usage.months.map((m) => [m.month.slice(5), m.docks_flying]), a.usage.totalDocks)}<div style="height:18px"></div></div>
-      <div class="card"><h3>Every dock, last 3 months ${chip("calc:" + a.id + ":tiers")}</h3>
-        <div class="legend"><span><i style="background:var(--green)"></i>regular (4+/mo)</span><span><i style="background:var(--amber)"></i>light</span><span><i style="background:var(--red)"></i>idle</span><span>⚠ battery / ⇣ offline</span></div>
-        <div class="dockgrid">${a.usage.docks.map((d) => { const t = a.usage.tiers.regular.includes(d.dock) ? "green" : a.usage.tiers.light.includes(d.dock) ? "amber" : "red"; return `<div class="dock ${t}" title="${esc(d.dock)}: ${d.flights_total} flights May–Oct, ${d.flights_last3} in last 3 months, ${d.battery_warnings} battery warnings, ${d.connection_drops} connection drops">${esc(d.dock.split("-").pop())}<br>${d.flights_last3}${d.battery_warnings >= 10 ? " ⚠" : ""}${d.offline_spells ? " ⇣" : ""}</div>`; }).join("")}</div>
-        <p class="sub">${a.usage.flights} flights, ${a.usage.neverFlew.length} docks never flew ${chip("calc:" + a.id + ":never_flew")}</p></div>
-    </div>
-    ${a.forceLog ? `<div class="grid g2" style="margin-top:14px"><div class="card tablewrap"><h3>By force — ${chip(a.forceLog.file)} (cleaned)</h3><table><thead><tr><th>Force</th><th class="num">Docks</th><th class="num">Live missions</th><th class="num">Training</th><th>Latest month</th><th class="num">Renewal value</th></tr></thead><tbody>
-        ${a.forceLog.summary.map((f) => `<tr><td><b>${esc(f.force)}</b></td><td class="num">${f.docks}</td><td class="num">${f.live_missions}</td><td class="num">${f.training}</td><td>${f.last_docks_live}/${f.docks} docks live in ${f.last_month}</td><td class="num"><span class="pill ${f.operational ? "green" : "red"}">${money(a, f.docks * a.perDock)}</span></td></tr>`).join("")}</tbody></table></div>
-      <div class="card"><h3>How the raw file was cleaned</h3><ul class="dq">${a.forceLog.issues.map((i) => `<li>${i.line ? `line ${i.line}: ` : ""}${esc(i.issue)}</li>`).join("")}</ul></div></div>` : ""}
-  </section>
-
-  <section class="q" id="timeline"><div class="qhead"><span class="qnum">↧</span><h2>Timeline</h2><p>History on file, live events and the dates ahead.</p></div>
-    <div class="grid g2"><div class="card"><h3>Deal history</h3><div class="timeline">${a.timeline.map((t) => `<div class="tl ${t.live ? "live" : ""}"><div class="d">${esc(t.date)}</div><b>${esc(t.what)}</b> ${t.detail ? `<span class="sub">${esc(t.detail)}</span>` : ""} ${chip(t.cite)}</div>`).join("")}</div></div>
-    <div class="card"><h3>Ahead</h3><div class="timeline">${a.keyDates.filter((k) => k.date >= S.asOf).map((k) => `<div class="tl future"><div class="d">${fmtD(k.date)}</div><span class="pill ${k.level === "move" ? "blue" : k.level}">${k.level === "move" ? "do" : k.level}</span> ${esc(k.what)}</div>`).join("")}</div>
-      <h3 style="margin-top:16px">Notes on this account (from list_notes)</h3>${notesHTML(a.id)}
-      <div class="flex" style="margin-top:10px"><button class="btn primary" onclick="writePlan('${a.id}')">Write the Monday plan to MCP</button></div></div></div>
-  </section>
-  ${footer()}`;
+  const openT = a.tickets.filter((t) => t.open).length;
+  const tabs = [["overview", "Overview"], ["plan", "Action plan", a.moves.filter((m) => status(m) !== "done").length], ["deals", "Deals"], ["people", "People"], ["risks", "Risks", a.risks.filter((r) => r.level === "red").length], ["unknowns", "Unknowns", a.gaps.length], ["tickets", "Tickets", openT], ["history", "History"]];
+  const hc = a.healthScore.color;
+  $("#main").innerHTML = topbar(esc(a.name), `${esc(a.sector)} · ${esc(a.currency)} · ${esc(a.what_they_bought)}`) + `
+  <div class="hero"><div class="ring" style="--p:${a.healthScore.score};--col:var(--${hc === "green" ? "green" : hc === "amber" ? "amber" : "red"})"><b style="color:var(--ink)">${a.healthScore.score}</b></div>
+    <div style="flex:1;min-width:240px"><div class="row"><b style="font-size:18px">Health: ${a.healthScore.label}</b><span class="pill c-orange">Renews in ${a.days_to_renewal} days · ${D(a.term_ends)}</span></div>
+      <p style="margin:8px 0 0;max-width:760px" class="sub">${esc(a.summary)}</p>
+      <div class="life">${["Onboard", "Adopt", "Expand", "Renew"].map((l) => `<span class="${a.lifecycle.stage === l ? "on" : ""}">${l}</span>`).join("")}</div></div>
+    <div style="text-align:right"><div class="sub small">Worth per year</div><div class="big">${K(a, a.annual)}</div><div class="sub small">${K(a, a.forecast.commit)} backed · ${K(a, a.book.at_risk)} at risk</div></div></div>
+  <div class="tabs">${tabs.map(([k, l, n]) => `<button class="tab ${acctTab === k ? "on" : ""}" onclick="setTab('${k}')">${l}${n ? `<span class="n">${n}</span>` : ""}</button>`).join("")}</div>
+  <div id="tabbody">${({ overview: tOverview, plan: tPlan, deals: tDeals, people: tPeople, risks: tRisks, unknowns: tUnknowns, tickets: tTickets, history: tHistory }[acctTab] || tOverview)(a)}</div>`;
+}
+function tOverview(a) {
+  const col = { blue: "var(--sky)", violet: "var(--violet)", orange: "var(--orange)", red: "var(--red)", amber: "var(--amber)" };
+  const months = a.usage.months;
+  const mx = Math.max(...months.map((m) => m.docks_flying), 1);
+  return `<h3 style="margin:0 0 10px">The five answers for Monday</h3>
+  <div class="grid g5">${a.answers.map((x, i) => `<div class="card ans" style="--c:${col[x.color]}" onclick="setTab('${x.tab}')"><div class="q">${i + 1} · ${esc(x.q)}</div><div class="a">${esc(x.short)}</div><div class="m">${esc(x.more)}</div><div style="margin-top:8px">${src(x.cites)}</div></div>`).join("")}</div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>💚 Why the health score is ${a.healthScore.score}</h3>${a.healthScore.parts.map((p) => `<div style="margin:10px 0"><div class="row small"><b>${esc(p.name)}</b><span class="spacer"></span><b>${p.score}</b></div><div class="bar" style="margin:4px 0"><i style="width:${p.score}%;background:var(--${p.score >= 70 ? "green" : p.score >= 45 ? "amber" : "red"})"></i></div><div class="small muted">${esc(p.why)} ${src(p.cites)}</div></div>`).join("")}</div>
+    <div class="card"><h3>🛩️ Are they flying? <span class="sub">docks that flew each month (of ${a.usage.totalDocks})</span></h3>
+      <div style="display:flex;align-items:flex-end;gap:8px;height:130px;margin:18px 0 22px">${months.map((m) => `<div style="flex:1;text-align:center"><div class="small"><b>${m.docks_flying}</b></div><div style="height:${(100 * m.docks_flying) / mx}px;background:var(--sky);border-radius:6px 6px 0 0"></div><div class="small muted">${new Date(m.month + "-01T00:00:00Z").toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" })}</div></div>`).join("")}</div>
+      ${a.forceLog ? `<table><tr><th>Force</th><th>Docks</th><th>Live missions (6 mo)</th><th></th></tr>${a.forceLog.summary.map((f) => `<tr><td><b>${esc(f.force)}</b></td><td>${f.docks}</td><td>${f.live_missions}</td><td><span class="pill ${f.operational ? "c-green" : "c-red"}">${f.operational ? "Flying" : "Not flying"}</span></td></tr>`).join("")}</table>` : `<p class="small">${a.usage.tiers.regular.length} docks fly most nights, ${a.usage.tiers.light.length} fly a few times a month, ${a.usage.tiers.none.length} never.</p>`}
+      <div>${src([a.forceLog?.file, `${a.id}/flights.csv`].filter(Boolean))}</div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>📈 Grow this account <span class="sub">upsell and cross-sell</span></h3><div class="tw"><table><tr><th>Opportunity</th><th>Type</th><th>Size</th><th>Next step</th></tr>${a.growth.filter((g) => !/^Feature lever/.test(g.title)).map((g) => `<tr><td><b>${esc(g.title)}</b></td><td><span class="pill ${/Won/.test(g.kind) ? "c-green" : /Declined/.test(g.kind) ? "c-grey" : /Unverified/.test(g.kind) ? "c-amber" : "c-blue"}">${esc(g.kind.replace(/ — .*/, ""))}</span></td><td>${esc(g.sizing.replace(/^Debrief value .*/, "Not sized yet"))}</td><td class="muted">${esc(g.next)} ${src(g.cites)}</td></tr>`).join("")}</table></div></div>`;
+}
+function tPlan(a) {
+  return `<p class="muted" style="margin-top:0">Ranked by money at stake and how soon it turns bad. Open “How to do it” for steps, the questions to ask, and a ready-to-send draft.</p>${a.moves.map((m) => actionCard({ ...m, acc: a })).join("")}`;
+}
+function tDeals(a) {
+  return `<div class="grid g2">${a.pipeline.map((d) => `<div class="card" style="cursor:pointer" onclick="openDeal('${a.id}','${esc(d.id)}')"><div class="row"><span class="pill c-blue">${esc(d.stageLabel)}</span>${d.forecast ? `<span class="pill ${d.forecast === "Commit" || d.forecast === "Won" ? "c-green" : d.forecast === "Best case" ? "c-amber" : d.forecast === "Lost" ? "c-red" : "c-grey"}">${esc(d.forecast)}</span>` : ""}${d.upsell ? '<span class="pill c-orange">Upsell</span>' : ""}<span class="spacer"></span><b>${esc(d.valueText)}</b></div>
+    <h3 style="margin:10px 0 4px">${esc(d.title)}</h3>${d.blocker ? `<div class="small"><b>Blocked by:</b> ${esc(d.blocker)}</div>` : ""}${d.decider ? `<div class="small muted">Decides: ${esc(d.decider)}</div>` : ""}
+    ${d.meddpicc ? `<div class="medd" style="margin-top:8px">${d.meddpicc.map((m) => `<span class="${m.s}" title="${esc(m.name)}">${m.k}</span>`).join("")}<span class="small muted" style="margin-left:6px">${d.winLabel} qualification</span></div>` : ""}</div>`).join("")}</div>
+    <div class="card" style="margin-top:16px"><h3>🗣️ Claims we are not counting</h3><p class="small muted" style="margin-top:0">Things people said with nothing to back them yet. Shown so nobody quotes them as fact.</p>${a.book.claimsApart.map((c) => `<div class="li"><span class="pill ${c.told ? "c-amber" : "c-red"}">${c.told ? "Said" : "Unproven"}</span><div class="body"><div>“${esc(c.text)}”</div><div class="small muted">${esc(c.by)}${c.implied ? ` · would be worth ${K(a, c.implied)} if true` : ""}</div></div>${src([c.id])}</div>`).join("") || '<p class="empty">None.</p>'}</div>`;
+}
+function tPeople(a) {
+  const roleOf = (name) => [...new Set(a.power.flatMap((p) => p.roles.filter((r) => r.who === name).map((r) => `${r.role.replace(/ \(.*\)/, "")} · ${a.pipeline.find((d) => d.id === p.deal)?.title.split(" (")[0] || p.deal}`)))];
+  const st = { ally: "c-green", warm: "c-green", neutral: "c-grey", guarded: "c-amber", "never met": "c-red" };
+  const card = (p) => `<div class="card"><div class="person">${av(p.name, 40)}<div style="flex:1;min-width:0"><div class="row"><b>${esc(p.name)}</b><span class="pill ${st[p.relationship] || "c-grey"}">${esc(p.relationship)}</span></div><div class="small muted">${esc(p.role)}</div>
+    <div class="small" style="margin-top:6px">${p.last_contact ? `Last contact ${D(p.last_contact)} · ` : ""}${p.platform ? `${p.platform.sign_ins_90d} logins in 90 days` : ""}</div>
+    <div class="chips" style="margin-top:6px">${roleOf(p.name).map((r) => `<span class="pill c-violet">${esc(r)}</span>`).join("")}</div><div style="margin-top:6px">${src(p.cites)}</div></div></div></div>`;
+  const gaps = a.power.flatMap((p) => p.roles.filter((r) => r.stance === "gap").map((r) => ({ ...r, deal: p.title })));
+  return `<p class="muted" style="margin-top:0">The buying committee: who decides, pays, uses and could block each deal — and how warm they are to us.</p>
+  <h3>People we know</h3><div class="grid g3">${a.people.filter((p) => p.met).map(card).join("")}</div>
+  <h3 style="margin-top:20px">Not met yet — but they matter</h3><div class="grid g3">${a.people.filter((p) => !p.met).map(card).join("") || '<p class="empty">Nobody.</p>'}</div>
+  ${gaps.length ? `<div class="card" style="margin-top:16px"><h3>❓ Seats we can't name</h3>${gaps.map((g) => `<div class="li"><span class="pill c-red">${esc(g.role)}</span><div class="body small">${esc(g.why)} <span class="muted">· ${esc(g.deal)}</span></div>${src(g.cites)}</div>`).join("")}</div>` : ""}`;
+}
+function tRisks(a) {
+  return `<div class="card">${a.risks.map((r) => `<div class="li"><span class="pill ${lvl[r.level]}" style="min-width:64px;justify-content:center">${r.level === "red" ? "Act now" : "Watch"}</span><div class="body"><div class="tt">${esc(r.title)}</div><div class="small muted">${esc(r.detail)}</div><div style="margin-top:4px">${src(r.cites)}</div></div><div style="text-align:right;min-width:120px">${r.turns_bad ? `<div class="small muted">Turns bad</div><b>${D(r.turns_bad)}</b><div class="small muted">${daysTo(r.turns_bad) <= 0 ? "now" : `in ${daysTo(r.turns_bad)} days`}</div>` : '<span class="small muted">Ongoing</span>'}</div></div>`).join("")}</div>`;
+}
+function tUnknowns(a) {
+  return `<p class="muted" style="margin-top:0">What the plan rests on that we don't know yet — and exactly who to ask.</p><div class="grid g2">${a.gaps.map((g) => `<div class="card"><div class="small muted">We don't know</div><b>${esc(g.what)}</b><div class="small" style="margin-top:6px"><b>Why it matters:</b> ${esc(g.why)}</div><div class="row small" style="margin-top:8px"><span class="pill c-violet">Ask</span>${esc(g.who)}</div><div style="margin-top:6px">${src(g.cites)}</div></div>`).join("")}</div>`;
+}
+function ticketRows(list, showAcct) {
+  return `<div class="tw"><table><tr><th>Priority</th><th>Ticket</th>${showAcct ? "<th>Account</th>" : ""}<th>From</th><th>Waiting</th><th>Owner</th><th>Status</th><th></th></tr>${list.map((t) => `<tr><td><span class="pill c-${t.color}">${t.priority}</span></td><td><b>${esc(t.id)}</b><div class="small">${esc(t.subject)}</div></td>${showAcct ? `<td>${esc(shortName(t.a))}</td>` : ""}<td class="small">${esc(t.from)}</td><td>${t.open ? `<b style="color:var(--${t.age > 30 ? "red" : t.age > 7 ? "amber" : "ink"})">${esc(t.waiting)}</b>` : "—"}</td><td>${t.owner ? esc(t.owner) : t.open ? '<span class="pill c-red">Unassigned</span>' : "—"}</td><td class="small">${esc(t.status)}</td><td>${src(t.cites, "Open")}</td></tr>`).join("")}</table></div>`;
+}
+function tTickets(a) { return `<div class="card">${ticketRows(a.tickets, false)}</div>`; }
+function tHistory(a) {
+  const ic = { call: ["📞", "c-blue"], email: ["✉️", "c-violet"], ticket: ["🎫", "c-amber"], note: ["📝", "c-grey"], alert: ["⚡", "c-red"], invoice: ["💷", "c-green"] };
+  const types = ["all", "call", "email", "ticket", "alert", "note", "invoice"];
+  const list = a.activities.filter((x) => histFilter === "all" || x.type === histFilter);
+  return `<div class="row" style="margin-bottom:10px">${types.map((t) => `<button class="filter ${histFilter === t ? "on" : ""}" onclick="histFilter='${t}';render()">${t === "all" ? "Everything" : t[0].toUpperCase() + t.slice(1) + "s"}</button>`).join("")}</div>
+  <div class="card">${list.map((x) => `<div class="li"><div class="tl-ic ${ic[x.type][1]}">${ic[x.type][0]}</div><div class="body"><div class="row"><b>${esc(x.title)}</b><span class="small muted">${DY(x.date)}</span></div><div class="small muted">${esc(x.who)}</div><div class="small" style="margin-top:3px">${esc(x.summary)}</div>${x.actions?.length ? `<div class="small muted">Actions: ${esc(x.actions.join(" · "))}</div>` : ""}<div style="margin-top:4px">${src(x.cites, "Attachment")}</div></div></div>`).join("") || '<p class="empty">Nothing here.</p>'}</div>`;
 }
 
-function barsHTML(pairs, max) {
-  const m = max || Math.max(1, ...pairs.map((p) => p[1]));
-  return `<div class="bars">${pairs.map(([l, v]) => `<div style="height:${(100 * v) / m}%"><em>${v}</em><span>${esc(l)}</span></div>`).join("")}</div>`;
-}
-function footer() {
-  return `<footer>Sources: Account Quest MCP (get_my_accounts, get_all_paperwork, get_signals, get_file, list_notes, get_flytbase_team, get_feature_requests) and the morning debrief from the play page. Chips coloured by fact status: <span class="chip fact-verified">verified</span><span class="chip fact-told">told</span><span class="chip fact-claim">claim</span>. Money is per account currency; accounts are never summed. Debrief values are the game's score in USD and are shown, not counted.</footer>`;
+// ---------- TICKETS ----------
+function renderTickets() {
+  const list = S.accounts.flatMap((a) => a.tickets.map((t) => ({ ...t, a }))).sort((x, y) => ({ Urgent: 0, High: 1, Normal: 2, Low: 3 }[x.priority] - { Urgent: 0, High: 1, Normal: 2, Low: 3 }[y.priority]));
+  const open = list.filter((t) => t.open);
+  $("#main").innerHTML = topbar("Tickets", "Every customer request in one queue — support tickets, emails nobody answered, and live alerts.") + `
+  <div class="grid" style="grid-template-columns:repeat(4,1fr)">${[["Open", open.length, "c-blue"], ["Urgent", open.filter((t) => t.priority === "Urgent").length, "c-red"], ["No owner", open.filter((t) => !t.owner).length, "c-amber"], ["Oldest wait", Math.max(0, ...open.map((t) => t.age)) + " days", "c-grey"]].map(([l, n, c]) => `<div class="card"><span class="pill ${c}">${l}</span><div class="big" style="margin-top:6px">${n}</div></div>`).join("")}</div>
+  <div class="card" style="margin-top:16px"><h3>Open</h3>${ticketRows(open, true)}</div>
+  <details class="card" style="margin-top:16px"><summary>Closed tickets (${list.length - open.length})</summary>${ticketRows(list.filter((t) => !t.open), true)}</details>`;
 }
 
-async function openEv(id) {
-  let e = S.evidence[id];
-  if (e?.truncated) e = await (await fetch("/api/evidence?id=" + encodeURIComponent(id))).json();
-  $("#dkind").textContent = `${e.kind}${e.status ? " · " + e.status : ""} · ${id}`;
-  $("#dtitle").textContent = e.label;
-  const rows = [["Where", e.where], ["Said by", e.said_by], ["Verified by", e.verified_by], ["Relationship", e.relationship], ["Stage", e.stage], ["Date", e.date], ["Value", e.value != null && typeof e.value !== "object" ? Number(e.value).toLocaleString("en-GB") : null], ["Learned", e.minute != null ? `minute ${e.minute} of discovery` : null]].filter((r) => r[1]);
-  $("#dbody").innerHTML = `<div class="kv">${rows.map(([k, v]) => `<div>${k}</div><div>${esc(v)}</div>`).join("")}</div>
-    ${e.cites?.length ? `<div class="sub">Built from</div><div style="margin:4px 0 12px">${chips(e.cites)}</div>` : ""}
-    ${e.text ? `<pre>${esc(e.text)}</pre>` : ""}
-    ${e.records ? e.records.map((r) => `<div class="sub" style="margin-top:10px">${esc(r.kind)} · ${esc(r.path)}</div><pre>${esc(r.text)}</pre>`).join("") : ""}`;
-  $("#drawer").classList.add("open"); $("#drawer").setAttribute("aria-hidden", "false");
+// ---------- CHAT ----------
+const CHANNELS = () => [["general", "# general"], ...S.accounts.map((a) => [a.id, `# ${shortName(a).toLowerCase().replace(/ /g, "-")}`]), ["ask", "✨ Ask Flightdeck"]];
+function renderChat() {
+  $("#main").innerHTML = topbar("Team chat", "Talk it through with the team. Mention <b>@flightdeck</b> anywhere, or use ✨ Ask Flightdeck, to get an answer from the account data.") + `
+  <div class="card chat" style="padding:0"><div class="chans">${CHANNELS().map(([k, l]) => `<button class="chan ${chatChan === k ? "on" : ""}" onclick="chatChan='${k}';renderChat()">${esc(l)}</button>`).join("")}
+    <div class="small muted" style="margin-top:auto;padding:8px">Coach: ${S.assistant === "claude" ? "Claude AI" : "built-in"}</div></div>
+    <div class="msgs"><div class="stream" id="stream"></div>
+    <div class="suggest">${(chatChan === "ask" || chatChan === "general" ? ["What do we do first?", "What could go wrong this week?", "Who decides the Aldermoor renewal?", "Draft the reply to Karen Mbeki"] : chatChan === "A" ? ["@flightdeck what's blocking Tarn Valley?", "@flightdeck who replaces Rhys?", "@flightdeck open tickets"] : ["@flightdeck how healthy is Aldermoor?", "@flightdeck what don't we know?", "@flightdeck upsell ideas"]).map((q) => `<button class="filter" onclick="sendChat(${JSON.stringify(q).replace(/"/g, "&quot;")})">${esc(q)}</button>`).join("")}</div>
+    <div class="compose"><textarea id="chatIn" placeholder="${chatChan === "ask" ? "Ask anything about the accounts…" : "Message the team — add @flightdeck to ask the coach"}" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendChat()}"></textarea><button class="btn pri" onclick="sendChat()">Send</button></div></div></div>`;
+  renderChatStream();
 }
-function closeDrawer() { $("#drawer").classList.remove("open"); $("#drawer").setAttribute("aria-hidden", "true"); }
+function renderChatStream() {
+  const el = $("#stream"); if (!el) return;
+  const msgs = C.messages.filter((m) => m.channel === chatChan);
+  el.innerHTML = msgs.length ? msgs.map((m) => `<div class="msg ${m.ai ? "ai" : ""} ${!m.ai && m.author === me?.name ? "mine" : ""}">${m.ai ? '<img src="/brand.svg" style="width:28px;height:28px;border-radius:8px">' : av(m.author)}<div style="min-width:0"><div class="who"><b>${esc(m.author)}</b> ${m.role ? `· ${esc(m.role)}` : ""} · ${ago(m.at)}</div><div class="bub">${linkCites(m.text)}</div></div></div>`).join("")
+    : `<div class="empty" style="text-align:center;margin:auto">No messages yet in this channel. ${chatChan === "ask" ? "Ask a question to get started." : "Say hello 👋"}</div>`;
+  el.scrollTop = el.scrollHeight;
+}
+let sending = false;
+async function sendChat(text) {
+  const box = $("#chatIn"); text = (text ?? box.value).trim(); if (!text || sending) return;
+  if (!me) return askWho();
+  sending = true; box.value = "";
+  const asking = chatChan === "ask" || /@flightdeck/i.test(text);
+  await fetch("/api/chat", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ channel: chatChan, author: me.name, role: me.role, text }) });
+  await loadCollab();
+  if (asking) { const el = $("#stream"); el.insertAdjacentHTML("beforeend", `<div class="msg ai" id="typing"><img src="/brand.svg" style="width:28px;height:28px;border-radius:8px"><div class="bub muted">Flightdeck is thinking…</div></div>`); el.scrollTop = el.scrollHeight; }
+  sending = false;
+}
+function discuss(id) {
+  const m = allMoves().find((x) => x.id === id);
+  chatChan = m.acc.id; route = "chat"; ls.set("fd_route", "chat"); render();
+  $("#chatIn").value = `About “${m.short}” (${m.owner.name}, due ${D(m.due)}): `; $("#chatIn").focus();
+}
+
+// ---------- UPDATES ----------
+function renderUpdates() {
+  const sig = S.accounts.flatMap((a) => a.signals.map((id) => ({ ...S.evidence[id], a })));
+  const notes = [...new Map(S.accounts.flatMap((a) => a.notes).map((n) => [JSON.stringify(n), n])).values()];
+  $("#main").innerHTML = topbar("Live updates", "Flightdeck checks for new account data every few minutes and updates every page by itself.") + `
+  <div class="grid g2"><div class="card"><h3>⚡ Live alerts from the accounts</h3>${sig.map((e) => `<div class="li"><div class="tl-ic c-red">⚡</div><div class="body"><b>${esc(e.label.split(": ").pop())}</b><div class="small muted">${esc(shortName(e.a))} · ${DY(e.date)}</div><div class="small">${esc(e.text)}</div>${src([e.id], "Original message")}</div></div>`).join("")}</div>
+  <div class="card"><h3>🔄 What changed recently</h3>${S.changes.slice(0, 25).map((c) => `<div class="li"><div class="body small"><b>${esc(c.summary.replace(/^Note written back to MCP: /, "Logged to Account Quest: "))}</b><div class="muted">${ago(c.at)}</div></div></div>`).join("") || '<p class="empty">No changes since the last restart.</p>'}
+    <h3 style="margin-top:18px">📝 Logged back to Account Quest</h3>${notes.slice(-8).reverse().map((n) => `<div class="li"><span class="pill c-grey">${esc(n.kind || "note")}</span><div class="body small"><b>${esc(n.title || "")}</b><div class="muted">${esc((n.text || "").slice(0, 140))}</div></div></div>`).join("") || '<p class="empty">Nothing yet.</p>'}
+    ${S.pendingNotes.length ? `<p class="small muted">${S.pendingNotes.length} more waiting to be logged (one per minute).</p>` : ""}</div></div>`;
+}
+
+// ---------- HOW IT WORKS ----------
+function renderHow() {
+  $("#main").innerHTML = topbar("How Flightdeck works", "The rules behind every number — in plain English.") + `<div class="card howto">
+  <h3>Where the data comes from</h3><p>Everything comes live from the Account Quest data service: accounts, people, deals, calls, emails, contracts, tickets, flight logs and live alerts. We also use the morning discovery notes. Flightdeck checks for new data every few minutes and updates by itself. Every number has a 📎 button that opens the original record.</p>
+  <h3>What a deal is worth</h3><p>We only count value that real usage backs. Price per dock = contract value ÷ number of docks. Docks at sites that actually fly count as <b>backed</b>. Docks nobody flies are <b>at risk</b>. Big claims nobody has proved, like "a 30-dock stadium project" or "€1.2M saved", are listed separately and never added in. The two accounts use different currencies and are never added together.</p>
+  <h3>How deals are qualified</h3><p>Each deal gets a MEDDPICC checklist: Metrics, Economic buyer, Decision criteria, Decision process, Paper process, Identified pain, Champion and Competition. Green means proven by a record. Amber means partly known. Red means unknown. The forecast puts a deal in <b>Commit</b> only when usage backs it, it is past Qualify, and at least half the checklist is known.</p>
+  <h3>How actions are ranked</h3><p>By money at stake, how urgent it is, and how many days are left. Every action has an owner from the team, a due date inside the customer's deadline, and a playbook: steps, questions to ask, and a ready-to-send draft. New alerts create new actions automatically. A request "this week" is due that Friday, and a contact leaving triggers a hand-over plan.</p>
+  <h3>How risk is judged</h3><p>Red = act now; amber = watch. Each risk has the date it turns bad:</p>
+  <ul><li>For a deadline, the deadline itself.</li><li>For a renewal, 30 days before the contract ends.</li><li>For a contact, 90 days of silence.</li><li>For an unanswered request, 30 days without a reply.</li></ul>
+  <h3>Health score</h3><p>Five parts, each 0–100:</p>
+  <ul><li>Product use (30%)</li><li>Relationships (20%)</li><li>Access to decision makers (20%)</li><li>Support (15%)</li><li>Momentum (15%)</li></ul>
+  <p>70+ is healthy, 45–69 needs watching, and below 45 is at risk.</p>
+  <h3>What it doesn't do yet</h3><p>It can't tell which dock sits at which force or plant, because the install sheets aren't on file. It can't read the content of ticket FB-10412. Its links between records are labelled "likely" where unproven.</p>
+  <h3>For developers</h3><p class="small muted">Source code, rules and the MCP endpoint (<span class="mono">POST /mcp</span>) are in the public repository's README.</p></div>`;
+}
+
+// ---------- drawer, sources ----------
+function openDrawer() { $("#drawer").classList.add("open"); $("#scrim").classList.add("open"); }
+function closeDrawer() { $("#drawer").classList.remove("open"); $("#scrim").classList.remove("open"); }
 document.addEventListener("keydown", (e) => e.key === "Escape" && closeDrawer());
-
-function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 4000); }
-async function writeBack(note) {
-  let key = localGet("wk") || "";
-  let r = await fetch("/api/notes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...note, key }) });
-  if (r.status === 403) { key = prompt("Write key (set on the server as WRITE_KEY):") || ""; localSet("wk", key); r = await fetch("/api/notes", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ ...note, key }) }); }
-  const j = await r.json();
-  toast(r.ok ? `Queued for write_note (position ${j.position}; one call a minute)` : `Not saved: ${j.error}`);
-  load();
+async function openSources(ids) {
+  if (ids.length === 1) return openRecord(ids[0]);
+  $("#dk").textContent = "Sources"; $("#dt").textContent = `${ids.length} records back this`;
+  $("#db").innerHTML = ids.map((id) => { const e = S.evidence[id]; return `<div class="li" style="cursor:pointer" onclick="openRecord('${esc(id)}')"><div class="tl-ic c-blue">📎</div><div class="body"><b>${esc(e.human)}</b><div class="small muted">${esc(e.label)}</div></div></div>`; }).join("");
+  openDrawer();
 }
-async function writePlan(acc) {
-  const a = S.accounts.find((x) => x.id === acc);
-  const text = a.moves.slice(0, 3).map((m) => `${m.rank}. ${m.title} — ${m.owner.name}, by ${m.due} (${m.deal}). Sources: ${m.cites.join(", ")}`).join("\n");
-  writeBack({ account: acc, kind: "task", title: `Monday plan — ${a.name}`, text });
+async function openRecord(id) {
+  let e = S.evidence[id];
+  if (e.truncated) e = { ...e, ...(await fetch("/api/evidence?id=" + encodeURIComponent(id)).then((r) => r.json())) };
+  $("#dk").textContent = e.human || e.kind; $("#dt").textContent = e.label;
+  const rows = [["Said by", e.said_by], ["Status", e.status && { verified: "Verified by a file", told: "Told to us — not yet verified", claim: "Claim — may be wrong" }[e.status]], ["Date", e.date && DY(e.date)], ["Relationship", e.relationship], ["Stage", e.stage]].filter((r) => r[1]);
+  $("#db").innerHTML = `${rows.length ? `<div class="kv">${rows.map(([k, v]) => `<div>${k}</div><div>${esc(v)}</div>`).join("")}</div>` : ""}
+    ${e.kind === "calc" ? `<div class="how" style="margin:0 0 12px"><b>How we worked it out</b><p style="margin:6px 0 0">${esc(e.text)}</p></div>` : ""}
+    ${e.cites?.length ? `<div class="small muted">Built from</div><div style="margin:4px 0 12px">${e.cites.map((c) => S.evidence[c] ? `<button class="src" onclick="openRecord('${esc(c)}')">📎 ${esc(S.evidence[c].human)}</button>` : "").join("")}</div>` : ""}
+    ${e.text && e.kind !== "calc" ? `<div class="small muted">Original record</div><pre>${esc(e.text)}</pre>` : ""}
+    ${e.records ? e.records.map((r) => `<div class="small muted" style="margin-top:10px">${esc(r.kind)} attached</div><pre>${esc(r.text)}</pre>`).join("") : ""}
+    <div class="small muted" style="margin-top:12px">Reference: <span class="mono">${esc(id)}</span></div>`;
+  openDrawer();
 }
 
-$("#theme").onclick = () => { const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); const n = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; localSet("theme", n); };
-if (localGet("theme")) document.documentElement.dataset.theme = localGet("theme");
+// ---------- actions ----------
+function toast(t) { const el = $("#toast"); el.textContent = t; el.classList.add("show"); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove("show"), 3500); }
+function copyDraft(id) { const m = allMoves().find((x) => x.id === id); const d = m.how.draft; navigator.clipboard?.writeText(`Subject: ${d.subject}\n\n${d.body}`).then(() => toast("Draft copied — paste it into your email"), () => toast("Couldn't copy — select the text instead")); }
+async function logToMcp(id) {
+  const m = allMoves().find((x) => x.id === id);
+  let key = ls.get("fd_wk") || "";
+  const body = (k) => JSON.stringify({ account: m.acc.id, kind: "next_step", title: m.short.slice(0, 150), text: `${m.why}\nOwner: ${m.owner.name}. Due: ${m.due}.\nSources: ${m.cites.join(", ")}`, key: k });
+  let r = await fetch("/api/notes", { method: "POST", headers: { "content-type": "application/json" }, body: body(key) });
+  if (r.status === 403) { key = prompt("Team write key (ask your manager):") || ""; ls.set("fd_wk", key); r = await fetch("/api/notes", { method: "POST", headers: { "content-type": "application/json" }, body: body(key) }); }
+  toast(r.ok ? "Logged — it reaches Account Quest within a minute" : "Not logged: wrong team key");
+}
+function askWho() {
+  $("#whoRole").innerHTML = S.roles.map((r) => `<option ${me?.role === r ? "selected" : ""}>${esc(r)}</option>`).join("");
+  $("#whoName").value = me?.name || ""; $("#who").classList.add("open"); $("#scrim").classList.add("open"); $("#whoName").focus();
+}
+function saveWho() { const n = $("#whoName").value.trim(); if (!n) return; me = { name: n.slice(0, 30), role: $("#whoRole").value }; ls.set("fd_me", JSON.stringify(me)); $("#who").classList.remove("open"); $("#scrim").classList.remove("open"); render(); toast(`Welcome, ${me.name}`); }
 
-// live: server pushes on every change; poll as a fallback
-try { const es = new EventSource("/api/events"); es.addEventListener("update", (m) => { const d = JSON.parse(m.data); const c = d.changes?.[0]; if (c && Date.now() - new Date(c.at) < 70000) toast("New: " + c.summary); load(); }); } catch {}
-setInterval(load, 60000);
-load();
+$("#theme").onclick = () => { const cur = document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"); const n = cur === "dark" ? "light" : "dark"; document.documentElement.dataset.theme = n; ls.set("fd_theme", n); };
+if (ls.get("fd_theme")) document.documentElement.dataset.theme = ls.get("fd_theme");
+
+// live: server pushes data updates and chat
+try {
+  const es = new EventSource("/api/events");
+  es.addEventListener("update", (m) => { const c = JSON.parse(m.data).changes?.[0]; if (c && Date.now() - new Date(c.at) < 70000 && /signal|new_|changed_/.test(c.kind)) toast("New: " + c.summary); load(); });
+  es.addEventListener("collab", (m) => { const ev = JSON.parse(m.data); if (ev.type === "chat" && ev.message.ai && route !== "chat") toast("Flightdeck answered in chat"); loadCollab(); });
+} catch {}
+setInterval(() => S && renderNav(), 30000);
+setInterval(load, 120000);
+load().then(() => { if (!me) askWho(); });
 </script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 // Point Claude / any MCP client at  POST <host>/mcp
 const TOOLS = [
   { name: "crm_overview", description: "Both accounts: health, book you can back, renewal date, top move, red risks.", inputSchema: { type: "object", properties: {} } },
-  { name: "account_answers", description: "The five answers for one account (book, power, first moves, risks, gaps), each with source ids.", inputSchema: { type: "object", properties: { account: { type: "string", enum: ["A", "B"] }, question: { type: "string", enum: ["book", "power", "moves", "risks", "gaps", "growth", "all"] } }, required: ["account"] } },
+  { name: "account_answers", description: "The five answers for one account (book, power, first moves, risks, gaps), each with source ids.", inputSchema: { type: "object", properties: { account: { type: "string", enum: ["A", "B"] }, question: { type: "string", enum: ["book", "power", "moves", "risks", "gaps", "growth", "pipeline", "health", "tickets", "all"] } }, required: ["account"] } },
   { name: "trace", description: "Resolve a source id (fact, file, record path, ticket, signal, calc:...) to where it came from and what it says.", inputSchema: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } },
   { name: "whats_new", description: "Recent changes picked up by the 5-minute sync (new live events, changed facts, stage moves).", inputSchema: { type: "object", properties: { limit: { type: "number" } } } },
   { name: "queue_note", description: "Queue a note/task/risk/next_step to be written back to the Account Quest MCP via write_note.", inputSchema: { type: "object", properties: { account: { type: "string" }, kind: { type: "string", enum: ["note", "task", "risk", "next_step"] }, title: { type: "string" }, text: { type: "string" }, key: { type: "string", description: "WRITE_KEY if the server requires one" } }, required: ["text"] } },
@@ -29,7 +29,7 @@ export async function mcpHandle(msg, { state, queueNote, writeKey }) {
       const x = a(args.account);
       if (!x) return ok(id, { isError: true, content: [{ type: "text", text: "Unknown account" }] });
       const q = args.question || "all";
-      const pick = { book: { backed: x.book.backed, at_risk: x.book.at_risk, deals: x.book.deals.map(({ id, title, stage, backed, at_risk, basis, cites }) => ({ id, title, stage, backed, at_risk, basis: basis.map((b) => s.evidence[b]?.text), cites })), offers: x.book.offers, claims_shown_apart: x.book.claimsApart }, power: x.power, moves: x.moves, risks: x.risks, gaps: x.gaps, growth: x.growth };
+      const pick = { book: { backed: x.book.backed, at_risk: x.book.at_risk, deals: x.book.deals.map(({ id, title, stage, backed, at_risk, basis, cites }) => ({ id, title, stage, backed, at_risk, basis: basis.map((b) => s.evidence[b]?.text), cites })), offers: x.book.offers, claims_shown_apart: x.book.claimsApart }, power: x.power, moves: x.moves.map(({ how, ...m }) => ({ ...m, how_steps: how?.steps })), risks: x.risks, gaps: x.gaps, growth: x.growth, pipeline: x.pipeline, health: x.healthScore, tickets: x.tickets };
       return ok(id, text(q === "all" ? pick : { [q]: pick[q] }));
     }
     case "trace": {

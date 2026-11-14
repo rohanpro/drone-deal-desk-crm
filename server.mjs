@@ -1,6 +1,6 @@
-// Drone SaaS deal desk — live CRM over the Account Quest MCP.
-//   node server.mjs        (env: AQ_TOKEN, PORT, WRITE_KEY optional)
-// Zero dependencies. Token stays here, never reaches the browser.
+// Flightdeck — revenue cockpit for a drone-in-a-box SaaS team, live over the Account Quest MCP.
+//   node server.mjs        (env: AQ_TOKEN, PORT, WRITE_KEY, ANTHROPIC_API_KEY optional)
+// Token stays here, never reaches the browser.
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
@@ -16,13 +16,16 @@ try {
 const { store, startSync, onChange, queueNote } = await import("./src/sync.mjs");
 const { analyze } = await import("./src/analyze.mjs");
 const { mcpHandle } = await import("./src/mcp-server.mjs");
+const { enrich } = await import("./src/sales.mjs");
+const { collab, addMessage, setTask, publicCollab, onCollab } = await import("./src/collab.mjs");
+const { ask, assistantMode } = await import("./src/assistant.mjs");
 
 const morning = JSON.parse(fs.readFileSync("seed/morning.json", "utf8"));
 const PORT = Number(process.env.PORT || 8787);
 const WRITE_KEY = process.env.WRITE_KEY || "";
 
 let cache = null;
-const state = () => (cache ||= analyze(store, morning));
+const state = () => (cache ||= enrich(analyze(store, morning), store));
 const clients = new Set();
 
 // Auto write-back: when something new lands, write one note per new item to the MCP (deduped).
@@ -54,8 +57,13 @@ onChange(() => {
   for (const c of clients) c.write(msg);
 });
 
+onCollab((ev) => {
+  const msg = `event: collab\ndata: ${JSON.stringify(ev)}\n\n`;
+  for (const c of clients) c.write(msg);
+});
+
 function slimState() {
-  const s = state();
+  const s = { ...state(), assistant: assistantMode() };
   const evidence = {};
   for (const [k, v] of Object.entries(s.evidence)) evidence[k] = v.text && v.text.length > 1200 ? { ...v, text: v.text.slice(0, 1200), truncated: v.text.length } : v;
   return { ...s, evidence };
@@ -85,6 +93,30 @@ const server = http.createServer(async (req, res) => {
       req.on("close", () => { clients.delete(res); clearInterval(ping); });
       return;
     }
+    if (url.pathname === "/api/collab") return send(res, 200, publicCollab());
+    if (url.pathname === "/api/chat" && req.method === "POST") {
+      const b = await readBody(req);
+      const m = addMessage({ channel: b.channel, author: b.author, role: b.role, text: b.text, ref: b.ref });
+      if (!m) return send(res, 400, { error: "empty message" });
+      send(res, 201, m);
+      if (b.channel === "ask" || /@flightdeck\b/i.test(m.text)) {
+        try {
+          const history = collab.messages.filter((x) => x.channel === m.channel).slice(-9, -1);
+          const reply = await ask({ question: m.text.replace(/@flightdeck\b/ig, "").trim(), history, state, collab });
+          addMessage({ channel: m.channel, author: "Flightdeck", role: reply.source === "claude" ? "AI coach" : "Coach", text: reply.text, ai: true });
+        } catch (e) {
+          console.error("[assistant]", e);
+          addMessage({ channel: m.channel, author: "Flightdeck", role: "Coach", text: "Sorry — I couldn't answer that just now. Try again in a moment.", ai: true });
+        }
+      }
+      return;
+    }
+    if (url.pathname === "/api/task" && req.method === "POST") {
+      const b = await readBody(req);
+      const t = setTask({ id: String(b.id || ""), status: b.status, by: b.by, role: b.role });
+      return t ? send(res, 200, t) : send(res, 400, { error: "bad task" });
+    }
+    if (url.pathname === "/brand.svg") return send(res, 200, fs.readFileSync("public/brand.svg", "utf8"), "image/svg+xml");
     if (url.pathname === "/api/notes" && req.method === "POST") {
       const b = await readBody(req);
       if (WRITE_KEY && b.key !== WRITE_KEY) return send(res, 403, { error: "write key required" });
@@ -102,7 +134,7 @@ const server = http.createServer(async (req, res) => {
     send(res, 404, { error: "not found" });
   } catch (e) {
     console.error(e);
-    send(res, 500, { error: String(e.message || e) });
+    if (!res.headersSent) send(res, 500, { error: String(e.message || e) });
   }
 });
 

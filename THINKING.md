@@ -1,4 +1,4 @@
-# Deal Desk: thinking doc (draft for the Google Doc)
+# Flightdeck: thinking doc (draft for the Google Doc)
 
 ## What it does, and for whom
 This is a Monday-morning deal desk for the CSM who has just inherited two drone-dock accounts, and for the manager they report to. It covers the Eastern Counties Police Alliance (£350k a year, renews 28 Feb 2027) and Aldermoor Industrial Group (€140k a year, renews 31 Jan 2027).
@@ -16,6 +16,8 @@ Every number links to the id it came from. It reads live from the Account Quest 
 - **A:** Only £270k of the £350k renewal is backed by usage. Westmere (18 docks) and Metro Central (9) fly. Tarn Valley and Norwold (8 docks, £80k) have flown no live missions in 6 months.
 - **A:** The champion (Rhys Calder) leaves in January, before the renewal. Karen Mbeki needs written answers this week ahead of a 5 Dec public event, and the two docks with 17 battery warnings each are among the busiest.
 - **B:** Only 4 of 14 docks fly regularly. The "€1.2M saved" figure has no working behind it. Group Finance asked for a per-plant quote on 8 Oct and nobody answered. The person who decides the renewal (Nadia Rahman, per the debrief) has never been met.
+
+**How it is built for a team.** Every role sees its own actions first on the Today page. Each action has a playbook: the steps, the questions to ask, and a ready-to-send draft. Deals move through standard B2B stages with a MEDDPICC checklist. Team chat has a coach that answers only from the account data and cites its sources. The design follows patterns from 10 leading CRMs (Salesforce, HubSpot, Dynamics, Pipedrive, Zoho, Freshsales, Gainsight, Clari/Gong, Close, Attio).
 
 ## How it decides: the rules
 - **Value only what usage backs.**
@@ -49,7 +51,8 @@ Every number links to the id it came from. It reads live from the Account Quest 
 - It does not read the contents of FB-10412. The link to the Tarn Valley DPIA is labelled as likely, not fact.
 - Move ranking is a transparent heuristic, not a trained model. Debrief values (USD game scores) are shown, not counted.
 - There is no login. Writing from the UI is guarded only by an optional `WRITE_KEY`.
-- It has no forecasting beyond the dated risks.
+- It has no forecasting beyond the dated risks and forecast categories.
+- Chat and task status live on the server's disk. On Render's free plan they reset when the app restarts.
 
 ## How I used AI
 I used Claude (Claude Code) to do the following:

@@ -4,10 +4,15 @@
   "description": "Live CRM over the Account Quest MCP: five answers per account, every number traced to its source.",
   "type": "module",
   "private": true,
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.mjs",
     "check": "node scripts/check.mjs",
     "seed": "node scripts/build-seed.mjs"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0"
   }
 }

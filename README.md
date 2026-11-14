@@ -1,27 +1,40 @@
-# Deal Desk: a live CRM for drone SaaS renewals and expansion
+# Flightdeck: the revenue cockpit for a drone-in-a-box SaaS team
 
 **Live:** https://drone-deal-desk-crm.onrender.com · **MCP endpoint:** `POST https://drone-deal-desk-crm.onrender.com/mcp`
 
-> Hosted on Render's free plan: the first visit after 15 idle minutes takes ~30 s while it wakes and re-syncs.
+> Hosted on Render's free plan. The first visit after 15 idle minutes takes about 30 s while the app wakes and re-syncs.
 
-A live CRM for two B2B accounts (Eastern Counties Police Alliance and Aldermoor Industrial Group). It reads everything through the **Account Quest MCP** and answers five questions for each account. Every number on it traces back to the id it came from:
+Flightdeck is a live CRM for a B2B team that sells drone docks, aircraft and software to police forces and industrial groups. It reads everything through the **Account Quest MCP** and turns it into plain-English answers that the whole team can act on: customer success, account executives, solutions engineers, support, marketing and their manager.
 
-1. **What is the book worth?** Each deal is valued only as far as usage backs it. Claims are shown apart.
-2. **Who holds the power?** Who decides, pays, uses, could block and champions each deal, and where each stands with you.
-3. **What do you do first?** Moves ranked by value at stake × urgency × days left, each with an owner, a due date and the deal it moves.
-4. **What is about to go wrong?** Deadlines, people going cold, unused docks and unverified claims, each with the date it turns bad.
-5. **What do you still not know?** The gaps the plan rests on, why each matters and who could fill it.
+**For each account it answers the five questions**, and every number links to the record it came from:
+1. **What is the book worth?** Only the value that real usage backs. Claims are shown apart.
+2. **Who holds the power?** Who decides, pays, uses and could block each deal, and how warm each person is.
+3. **What do we do first?** Ranked actions with an owner, a date, the deal they move, and a playbook with steps, questions to ask and a ready-to-send draft.
+4. **What is about to go wrong?** Red and amber risks, each with the date it turns bad.
+5. **What do we still not know?** Each gap, why it matters, and who to ask.
 
-It also shows upsell and cross-sell, raw usage (flights and devices), how the messy force log was cleaned, a timeline, and a live feed.
+**CRM features:** These were chosen after benchmarking 10 leading B2B CRMs (see [docs/crm-benchmark.md](docs/crm-benchmark.md)).
+- A "Today" home showing each role's actions.
+- A colour-coded pipeline board running Prospect → Discover → Qualify → Prove value → Proposal → Commit → Won/Lost.
+- Forecast categories: Won, Commit, Best case and Pipeline.
+- A MEDDPICC qualification checklist on every deal.
+- An account health score that explains its own reasons.
+- Customer lifecycle stages: Onboard → Adopt → Expand → Renew.
+- A unified ticket queue with priorities and wait times.
+- A history timeline of calls, emails, tickets, alerts, notes and invoices, each with the original attached.
+- An upsell and cross-sell list.
+- Team chat with a channel per account.
+- **Ask Flightdeck**, a coach that answers from the account data. It uses Claude when `ANTHROPIC_API_KEY` is set and a built-in rule-based coach otherwise.
+- Task status (to do, in progress, done) with team points.
 
 ## Run it
 
 ```bash
 echo "AQ_TOKEN=<your token>" > .env      # never commit this; .gitignore covers it
-npm start                                # http://localhost:8787
+npm install && npm start                 # http://localhost:8787
 ```
 
-There are no dependencies (Node ≥ 20). Optional env vars:
+Node ≥ 20. The only dependency is `@anthropic-ai/sdk`, for the optional AI coach. Run `npm install` first. The app still runs without it. Optional env vars:
 
 | var | meaning |
 |---|---|
@@ -29,6 +42,8 @@ There are no dependencies (Node ≥ 20). Optional env vars:
 | `PORT` | default 8787 |
 | `WRITE_KEY` | if set, writing notes from the UI or `/mcp` needs this key |
 | `AUTO_NOTES=0` | turn off automatic write-back of the #1 move and new red risks |
+| `ANTHROPIC_API_KEY` | optional; turns on the Claude-powered coach in Team chat (model `claude-opus-5-5`, override with `ASSISTANT_MODEL`) |
+| `SYNC=0` | serve stored data only (no MCP calls), e.g. for a second local copy |
 | `DATA_DIR` | where the live store is kept (default `./data`) |
 
 `seed/store.json` is a snapshot of the first pull, so a fresh deploy can render straight away. The sync then refreshes everything.
@@ -114,7 +129,11 @@ src/sync.mjs          rate-limited sync queue, store, diff/change log, note writ
 src/analyze.mjs       the decision engine (five answers + growth), all cited
 src/parse.mjs         CSV parsing, force-log cleaning, date helpers
 src/mcp-server.mjs    our MCP endpoint
-public/index.html     the UI (single file, no build)
+src/sales.mjs         sales-cycle layer: stages, MEDDPICC, forecast, health, tickets, timeline, playbooks
+src/collab.mjs        team chat, task status, points (data/collab.json)
+src/assistant.mjs     "Ask Flightdeck" coach (Claude, or the built-in rules)
+docs/crm-benchmark.md what we took from the top 10 B2B CRMs
+public/index.html     the UI (single file, no build) · public/brand.svg logo
 seed/                 morning debrief + first-pull snapshot
 scripts/              one-off pull, seed builder, citation check
 ```

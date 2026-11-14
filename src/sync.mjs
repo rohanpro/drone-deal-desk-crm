@@ -144,6 +144,7 @@ export function refreshNow(key) {
 let timer;
 export function startSync() {
   if (timer) return;
+  if (process.env.SYNC === "0") { console.warn("[sync] SYNC=0 — serving stored data only"); return; }
   if (!process.env.AQ_TOKEN) { console.warn("[sync] AQ_TOKEN missing — serving stored data only"); return; }
   setTimeout(tick, 2_000);
   timer = setInterval(tick, TICK_MS);
